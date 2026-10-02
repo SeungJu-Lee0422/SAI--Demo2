@@ -25,13 +25,14 @@ const RESPONSE_SCHEMA={
      category:{type:'string',enum:CATEGORIES},
      reason:{type:'string'},
      connections:{
-      type:'array',minItems:2,maxItems:50,
+      // Keep nested arrays simple for Interactions; validate exact membership locally.
+      type:'array',
       items:{
        type:'object',additionalProperties:false,
        required:['profile','interests','reason'],
        properties:{
         profile:{type:'string'},
-        interests:{type:'array',minItems:1,maxItems:6,items:{type:'string'}},
+        interests:{type:'array',items:{type:'string'}},
         reason:{type:'string'},
        },
       },

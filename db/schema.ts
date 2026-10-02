@@ -1,7 +1,7 @@
 // Intentionally empty by default.
 // Add Drizzle tables here when the site actually needs a database.
 // See examples/d1/db/schema.ts for an opt-in example.
-import {sqliteTable,text,integer,primaryKey} from 'drizzle-orm/sqlite-core';
+import {sqliteTable,text,integer,primaryKey,unique} from 'drizzle-orm/sqlite-core';
 export const sessions=sqliteTable('sessions',{tokenHash:text('token_hash').primaryKey(),owner:text('owner').notNull(),created:text('created').notNull()});
 export const profiles=sqliteTable('profiles',{id:text('id').primaryKey(),owner:text('owner').notNull().unique(),name:text('name').notNull(),bio:text('bio').notNull().default(''),interests:text('interests').notNull().default('[]'),avatar:text('avatar').notNull().default(''),color:text('color').notNull().default('#3154F5'),created:text('created').notNull(),linkedinHandle:text('linkedin_handle').notNull().default(''),linkedinVisible:text('linkedin_visible').notNull().default('private'),instagramHandle:text('instagram_handle').notNull().default(''),instagramVisible:text('instagram_visible').notNull().default('private')});
 export const rooms=sqliteTable('rooms',{id:text('id').primaryKey(),owner:text('owner').notNull(),name:text('name').notNull(),created:text('created').notNull()});
@@ -14,3 +14,4 @@ export const authAttempts=sqliteTable('auth_attempts',{key:text('key').primaryKe
 export const roomPlans=sqliteTable('room_plans',{room:text('room').primaryKey().references(()=>rooms.id,{onDelete:'cascade'}),payload:text('payload').notNull(),created:text('created').notNull()});
 export const oauthStates=sqliteTable('oauth_states',{state:text('state').primaryKey(),owner:text('owner').notNull().references(()=>accounts.owner,{onDelete:'cascade'}),provider:text('provider').notNull(),codeVerifier:text('code_verifier').notNull(),expires:integer('expires').notNull()});
 export const sourceSyncs=sqliteTable('source_syncs',{owner:text('owner').primaryKey().references(()=>accounts.owner,{onDelete:'cascade'}),youtubeStatus:text('youtube_status').notNull().default('never'),youtubeSummary:text('youtube_summary').notNull().default(''),youtubeUpdated:text('youtube_updated'),linkedinStatus:text('linkedin_status').notNull().default('never'),linkedinSummary:text('linkedin_summary').notNull().default(''),linkedinUpdated:text('linkedin_updated'),updated:text('updated').notNull()});
+export const interestTopics=sqliteTable('interest_topics',{id:text('id').primaryKey(),owner:text('owner').notNull().references(()=>profiles.owner,{onDelete:'cascade'}),canonicalKey:text('canonical_key').notNull(),label:text('label').notNull(),category:text('category').notNull(),created:text('created').notNull()},t=>[unique().on(t.owner,t.canonicalKey)]);

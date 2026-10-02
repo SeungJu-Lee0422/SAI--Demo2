@@ -1,4 +1,4 @@
-CREATE TABLE `linkedin_import_jobs` (
+CREATE TABLE IF NOT EXISTS `linkedin_import_jobs` (
  `id` text PRIMARY KEY NOT NULL,
  `owner` text NOT NULL,
  `url` text NOT NULL,
@@ -16,5 +16,5 @@ CREATE TABLE `linkedin_import_jobs` (
  `saved` integer NOT NULL DEFAULT 0,
  FOREIGN KEY (`owner`) REFERENCES `accounts`(`owner`) ON DELETE CASCADE
 );--> statement-breakpoint
-CREATE INDEX `linkedin_import_jobs_owner_created` ON `linkedin_import_jobs` (`owner`,`created`);
-CREATE UNIQUE INDEX `linkedin_import_jobs_one_pending_owner` ON `linkedin_import_jobs` (`owner`) WHERE `status` = 'pending';
+CREATE INDEX IF NOT EXISTS `linkedin_import_jobs_owner_created` ON `linkedin_import_jobs` (`owner`,`created`);
+CREATE UNIQUE INDEX IF NOT EXISTS `linkedin_import_jobs_one_pending_owner` ON `linkedin_import_jobs` (`owner`) WHERE `status` = 'pending';
