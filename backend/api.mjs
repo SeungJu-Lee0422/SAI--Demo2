@@ -5,6 +5,7 @@ import {accountAction} from './auth.mjs';
 import {previewLinkedInText,LINKEDIN_TEXT_LIMIT} from '../shared/linkedin-preview.ts';
 import {canonical,contactOrSensitive,findMatches,preferenceOf,positiveInterests,eligibleMatches,normalizeInstagram,normalizeLinkedIn,preferenceQuestions} from '../shared/matching.ts';
 import {parseLinkedInText,mergeSourceInterests,sourceSummary,youtubeCandidates} from './source-ingestion.mjs';
+import {LinkedInImportError,pollLinkedInImport,saveLinkedInImport,startLinkedInImport} from './linkedin-import.mjs';
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Access-Control-Allow-Origin':'*','Cache-Control':'no-store'}});
 const fail=(error,status=400)=>json({error},status);
 function storedInterests(value){let parsed=[];try{parsed=JSON.parse(value||'[]')}catch{}return Array.isArray(parsed)?parsed.filter(t=>t&&typeof t==='object'&&typeof t.label==='string'&&typeof t.category==='string'):[];}
@@ -67,6 +68,18 @@ export async function api(req,env){const requestStartedAt=Date.now();try{
  if(!account)return fail('회원가입 또는 로그인해주세요.',401);
  if(!owner)return fail('세션이 만료되었어요. 다시 시작해주세요.',401);
  let p=await db.prepare('SELECT * FROM profiles WHERE owner=?').bind(owner).first();
+ if(b.action==='startLinkedInImport'){
+  if(!p)return fail('먼저 내 취향을 등록해주세요.');
+  try{return json(await startLinkedInImport(db,owner,b.url,env));}catch(error){if(error instanceof LinkedInImportError)return fail(error.message,error.status);throw error;}
+ }
+ if(b.action==='pollLinkedInImport'){
+  if(!p)return fail('먼저 내 취향을 등록해주세요.');
+  try{return json(await pollLinkedInImport(db,owner,b.jobId,env));}catch(error){if(error instanceof LinkedInImportError)return fail(error.message,error.status);throw error;}
+ }
+ if(b.action==='saveLinkedInImport'){
+  if(!p)return fail('먼저 내 취향을 등록해주세요.');
+  try{return json(await saveLinkedInImport(db,owner,b.jobId,b.selectedIds));}catch(error){if(error instanceof LinkedInImportError)return fail(error.message,error.status);throw error;}
+ }
  if(b.action==='startYouTubeOAuth'){
   if(!p)return fail('먼저 내 취향을 등록해주세요.');if(!env.YOUTUBE_CLIENT_ID||!env.YOUTUBE_CLIENT_SECRET||!env.YOUTUBE_REDIRECT_URI)return fail('YouTube 연결 설정이 아직 완료되지 않았어요. 관리자에게 OAuth 환경 설정을 요청해주세요.',503);
   const state=base64url(crypto.getRandomValues(new Uint8Array(32))),verifier=base64url(crypto.getRandomValues(new Uint8Array(64))),challenge=base64url(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier))));

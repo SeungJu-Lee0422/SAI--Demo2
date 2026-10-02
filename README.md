@@ -22,7 +22,7 @@ npm run server
 - **계정:** 아이디·비밀번호·확인으로 가입, 로그인·로그아웃, 세션 복원. 첫 프로필 설정 후 세 탭으로 이동합니다.
 - **프로필:** 이름·사진·소개, 관심사 직접 입력, 좋아함·피함·탐색, 항목별 공유 설정, Instagram·LinkedIn 링크와 친구 공개 설정, 프로필 링크/QR, 프로필 삭제.
 - **친구:** 프로필 코드/링크로 요청, 받은 요청 수락·거절, 연결 해제, 수락한 친구의 공개 SNS 링크, 이름 검색, 나를 포함하거나 제외한 다중 비교, 공통 관심사 Top-3와 사용자별 근거.
-- **마이:** 실제 YouTube 데이터 가져오기, LinkedIn 프로필 텍스트 가져오기, 명시적인 기술·관심사 목록 미리보기, 문장 AI 추출 후보 선택, 개인 Qwen3 관심사 분석과 원문 근거.
+- **마이:** 실제 YouTube 데이터 가져오기, LinkedIn 링크에서 관심사 1~5개 제안·선택 저장, 프로필 텍스트 가져오기, 명시적인 기술·관심사 목록 미리보기, 문장 AI 추출 후보 선택, 개인 Qwen3 관심사 분석과 원문 근거.
 - **그룹:** 모임 생성, 코드/링크/QR 초대·참여, 참가자 목록과 공통 관심사, 3~30명 선택·테이블당 3/4/5명, 실제 CP-SAT 최대 3개 추천안, 테이블별 품질·근거, 모임장 편성 확정, 새로고침 후 복원, 모임 나가기.
 
 추천 결과는 실제 `OPTIMAL/FEASIBLE` 상태와 전체/제한 후보 범위를 표시합니다. 제한 후보나 시간 제한의 결과를 전역 최적이라고 표현하지 않습니다. 확정 편성의 배정은 저장하며, 다시 열 때의 점수와 근거는 **현재 공유 관심사로 다시 계산한 값**이라고 표시합니다. 점수는 관심사 연결의 참고 지표이며 관계 성공 확률이 아닙니다.
@@ -39,7 +39,11 @@ npm run server
 
 **서비스 YouTube:** Google Cloud의 YouTube Data API v3, 웹 OAuth 클라이언트와 `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REDIRECT_URI`를 설정합니다. 기본 콜백은 `http://localhost:8788/api/app?action=youtubeCallback`입니다. PKCE와 읽기 전용 권한으로 재생목록·영상·구독 채널을 가져옵니다. 연결 창에서 인증한 뒤 화면으로 돌아와 새로고침합니다. 수집 한도와 일부 실패 상태를 표시하며, 액세스 토큰은 저장하지 않습니다.
 
-**서비스 LinkedIn:** 사용자가 직접 내보내 붙여넣은 프로필 텍스트를 실제 입력으로 처리합니다. 기술·경력·교육·프로젝트 제목을 지원합니다. 별도의 명시 목록 미리보기는 프로필 수정에서 사용하며, 선택해 저장한 항목에 검증된 LinkedIn 출처를 부여하지 않습니다. LinkedIn 계정 인증이나 자동 경력 수집은 서비스에서 제공하지 않습니다.
+**서비스 LinkedIn:** 마이 → LinkedIn에서 공개 개인 프로필 링크를 입력하면 Bright Data가 프로필을 수집하고, Gemini가 경력·기술·프로젝트 원문을 근거로 관심사 후보 1~5개를 제안합니다. 원하는 후보를 선택해 저장해야 프로필에 반영됩니다. 기존 관심사와 공개 설정은 유지하며, 새 후보는 비공개·탐색으로 저장합니다. 링크와 원문 근거를 보존하고 실제 선호라고 단정하지 않습니다. 기존 프로필 텍스트 가져오기도 사용할 수 있습니다.
+
+서버에 `BRIGHTDATA_API_KEY`, `GEMINI_API_KEY`가 필요합니다. 선택 설정은 `BRIGHTDATA_LINKEDIN_DATASET_ID`(기본 `gd_l1viktl72bvl7bjuj0`), `LINKEDIN_GEMINI_MODEL`(기본 `gemini-3.5-flash-lite`)입니다. 키를 브라우저 또는 `EXPO_PUBLIC_*`에 넣지 않습니다. Bright Data 수집은 비동기 작업으로 시작하고, 인증된 사용자가 진행 상태를 조회합니다. 수집 중 새로고침해도 같은 작업을 이어서 확인할 수 있고, 원본 프로필 전체는 앱 DB에 보관하지 않습니다. 새 작업은 반복 요청을 제한하며 수집 실패·제공자 인증·요금제·할당량 오류는 화면에 표시합니다.
+
+연동 API는 `startLinkedInImport`(링크), `pollLinkedInImport`(작업 ID), `saveLinkedInImport`(작업 ID와 선택한 후보 ID)입니다. 작업은 계정별로 분리하고 확인된 서버 후보만 저장합니다. 로컬 서버는 SQL 마이그레이션을 적용하며, Vercel 배포 전 `db:migrate:turso`로 `0008_linkedin_import.sql`을 적용합니다. [Bright Data 비동기 수집 API](https://docs.brightdata.com/api-reference/rest-api/scraper/asynchronous-requests)와 [Gemini 구조화 출력](https://ai.google.dev/gemini-api/docs/structured-output)을 사용합니다.
 
 **브라우저 AI:** Qwen3-Embedding-0.6B로 개인 관심사와 선택한 사람의 의미 비교를 실행합니다. 문장 정리는 별도 Qwen3-0.6B 생성 모델을 사용합니다. 각 모델은 첫 실행에 약 614MB 다운로드가 필요하며 PC 사용을 권장합니다. 모델 준비·오류·중단 상태를 표시하고 사용자가 선택한 후보만 프로필 저장 때 반영합니다. 네이티브 문장 추출은 기존 Ollama/OpenAI 서버 설정을 사용합니다. 개인 AI와 친구 AI 의미 비교는 웹에서 실행합니다.
 

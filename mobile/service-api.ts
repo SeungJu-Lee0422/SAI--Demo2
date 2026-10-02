@@ -1,6 +1,6 @@
 import {Platform} from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import type {Profile, Match} from '../shared/matching';
+import type {Profile, Match, Interest} from '../shared/matching';
 
 const API = (process.env.EXPO_PUBLIC_API_URL || (Platform.OS === 'web' ? '' : 'http://localhost:8788')).replace(/\/$/, '');
 const SESSION_KEY = 'sai-session';
@@ -14,6 +14,14 @@ export type SourceState = {
   samples: string[];
   counts: Record<string, number>;
   errors?: string[];
+};
+
+export type LinkedInImportJob = {
+  jobId: string;
+  status: 'pending' | 'ready' | 'failed';
+  url: string;
+  candidates?: Interest[];
+  error?: string;
 };
 
 export type Assignment = {

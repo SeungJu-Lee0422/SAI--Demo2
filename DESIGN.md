@@ -14,7 +14,7 @@
 
 ## Product goals
 - Goals: accounts, editable private interests, sources, accepted friends, invite rooms and real CP-SAT assignments in Demo2 screens. Accepted-friend detail includes shared social links and connection removal.
-- Non-goals: chat, automatic collection of LinkedIn career data, new dependencies, production deployment.
+- Non-goals: chat, new dependencies; background collection without a user request.
 - Success signals: signup → profile → shared interests → accepted friendship / joined room → comparison → assignment → confirmation survives reload.
 
 ## Personas and jobs
@@ -33,6 +33,7 @@
 - Privacy decisions are visible beside each interest and each social link.
 - Show common topics only with evidence for every selected person; label partial table topics with participant coverage.
 - Conversation topics distinguish 공통 관심사 from 연결 주제. When direct topics are insufficient, opt-in Gemini discovery uses only representative public interests; Qwen3 verifies support for every person before a bridge appears or contributes to table quality.
+- LinkedIn import: user-provided public profile link → collection → AI suggests one to five interests → user selects candidates → private save. Show the original profile evidence beside each suggestion; inferred work topics start as 탐색 interests. Keep manual text import as a secondary option. Preserve source-job progress across page navigation and reload, and make provider failures recoverable.
 - Bridge detail shows each person's actual interest evidence, connection explanation, and semantic relevance. If no candidate passes validation, explain that a strong conversation topic could not be found; preserve available direct results when discovery is unavailable.
 - Tradeoffs: SAI's authenticated APIs remain separate from anonymous Demo APIs; reuse presentation without conflating sessions.
 
@@ -85,4 +86,4 @@
 
 ## Open questions
 - [ ] Real Google OAuth credentials/account validation require user-owned setup; preserve clear setup errors.
-- [ ] Physical iOS/Android validation and public deployment are outside this local integration.
+- [ ] Physical iOS/Android validation remains pending. Vercel deployment is explicitly requested.
