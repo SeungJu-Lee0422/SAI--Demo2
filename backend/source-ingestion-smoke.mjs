@@ -12,8 +12,17 @@ for(const file of fs.readdirSync('drizzle').filter(x=>x.endsWith('.sql')).sort()
  sql.exec(fs.readFileSync('drizzle/'+file,'utf8').replaceAll('--> statement-breakpoint',''));
 }
 const DB={prepare(query){const statement=sql.prepare(query);let values=[];return {bind(...args){values=args;return this;},async first(){return statement.get(...values)||null;},async all(){return {results:statement.all(...values)};},async run(){return statement.run(...values);}};},async batch(statements){sql.exec('BEGIN');try{const result=[];for(const statement of statements)result.push(await statement.run());sql.exec('COMMIT');return result;}catch(error){sql.exec('ROLLBACK');throw error;}}};
-const fixtureEmbeddings=async texts=>texts.map(text=>text.includes(' · ')?[1,0,0]:text==='음악 재즈'?[0,0,1]:[.8,.6,0]);
-const forceGenerationEmbeddings=()=>{let calls=0;return async texts=>{calls++;return texts.map(text=>calls===1&&!text.includes(' · ')?[0,1,0]:[1,0,0]);};};
+const fixtureEmbeddings=async texts=>texts.map(text=>{
+ if(text==='음악 재즈')return [0,0,1];
+ if(text.includes('재즈 피아노 즉흥연주')||text.includes('Piano Workshop')||text.includes('Blue Note Reviews')||text.includes('Rhythm Lab'))return [1,0,0];
+ if(text.includes('라이브 음악 감상')||text.includes('Seoul Live Music'))return [.7,.714,0];
+ if(text.includes('Jazz Sessions'))return [.92,.38,0];
+ return [0,0,1];
+});
+const forceGenerationEmbeddings=()=>{let calls=0;return async texts=>{calls++;return texts.map(text=>{
+ const labels=['Senior Data Engineer','Computer Science','Recommendation Engine','Python','SQL','Machine Learning','Deep Learning Foundations'],index=labels.findIndex(label=>text.includes(label)),vector=Array(8).fill(0);
+ vector[index<0?(calls===1&&!text.includes(' · ')?7:0):index+1]=1;return vector;
+});};};
 const baseEnv={DB,embedInterestTexts:fixtureEmbeddings,YOUTUBE_CLIENT_ID:'client-id',YOUTUBE_CLIENT_SECRET:'client-secret',YOUTUBE_REDIRECT_URI:'https://app.test/api/app?action=youtubeCallback'};
 async function call({body,token='',query='',env=baseEnv}={}){const response=await api(new Request('https://app.test/api/app'+query,{method:body?'POST':'GET',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})}),env);const type=response.headers.get('content-type')||'';return {status:response.status,data:type.includes('json')?await response.json():await response.text()};}
 async function account(username){const password='private-password-123',registered=await call({body:{action:'register',username,password,confirmPassword:password}});assert.equal(registered.status,200);await call({body:{action:'saveProfile',name:username,interests:[{id:'existing',label:'재즈',category:'음악',shared:true,preference:'like'}]},token:registered.data.token});return registered.data.token;}

@@ -14,7 +14,7 @@
 
 ## Product goals
 - Goals: accounts, editable private interests, sources, accepted friends, invite rooms and real CP-SAT assignments in Demo2 screens. Accepted-friend detail includes shared social links and connection removal.
-- Non-goals: chat, automatic collection of LinkedIn career data, new dependencies, production deployment.
+- Non-goals: chat, new dependencies; background collection without a user request.
 - Success signals: signup → profile → shared interests → accepted friendship / joined room → comparison → assignment → confirmation survives reload.
 
 ## Personas and jobs
@@ -34,7 +34,8 @@
 - Show common topics only with evidence for every selected person; label partial table topics with participant coverage.
 - Conversation topics distinguish 공통 관심사 from 연결 주제. Automatic discovery is enabled by default and remains an explicit user choice: when fewer than three direct topics have evidence for every selected person, Gemini proposes bridge labels from representative public interests and Qwen3 requires per-member relevance of 0.60 plus harmonic consensus of 0.65. The combined result remains Top 3. Turning discovery off keeps direct topics only.
 - YouTube connection loads source data without registering interests. Users select exactly five subscription channels, then request AI analysis and normalization. The server compares source text with the account's existing private topic catalog through Qwen3; only unmatched evidence goes to Gemini for a candidate label, and Qwen3 must verify that label against its original source before a private interest is saved.
-- LinkedIn import accepts only text the user manually exported and pasted. It follows the same existing-topic comparison, unmatched-label generation, and source verification flow as YouTube; LinkedIn account authentication and automatic career collection remain out of scope.
+- LinkedIn import: user-provided public profile link → collection → AI suggests one to five interests → user selects candidates → private save. Show the original profile evidence beside each suggestion; inferred work topics start as 탐색 interests. Keep manual text import as a secondary option. Preserve source-job progress across page navigation and reload, and make provider failures recoverable.
+- Manually exported LinkedIn text remains a secondary import option and follows the same existing-topic comparison, unmatched-label generation, and source verification flow as YouTube. LinkedIn account authentication remains out of scope.
 - Source normalization preserves original evidence and never uses another user's data. The topic catalog is private to its account, has no global unbounded generation path, and is deleted with the profile. A request accepts at most 40 incoming source items and a profile keeps at most 100 interests. The Qwen match/verification threshold is a provisional 0.75.
 - Source privacy filtering excludes contact identifiers and unsupported sensitive evidence before storage. If filtering leaves no verifiable evidence, save nothing and explain the empty result.
 - Gemini is required only when source evidence does not match the existing catalog. Qwen source normalization is mandatory; a model error saves no partial result. Existing interests and sharing decisions remain unchanged.
@@ -91,4 +92,4 @@
 
 ## Open questions
 - [ ] Real Google OAuth credentials/account validation require user-owned setup; preserve clear setup errors.
-- [ ] Physical iOS/Android validation and public deployment are outside this local integration.
+- [ ] Physical iOS/Android validation remains pending. Vercel deployment is explicitly requested.

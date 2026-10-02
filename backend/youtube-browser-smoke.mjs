@@ -63,7 +63,7 @@ try {
   await page.goto(origin);
   await page.getByRole('tab', {name: '마이', exact: true}).click();
   await page.getByText('YouTube', {exact: true}).click();
-  const extract = () => page.getByRole('button', {name: '선택한 5개 채널로 관심사 추출', exact: true});
+  const extract = () => page.getByRole('button', {name: '선택한 5개 채널 분석·정규화', exact: true});
   await page.getByText('0/5개 선택', {exact: true}).waitFor();
   assert.equal(state.me.interests.length, 0);
   assert(await extract().isDisabled());
@@ -88,7 +88,7 @@ try {
   assert.equal(state.me.interests.length, 0);
   assert.equal(await page.getByRole('checkbox', {checked: true}).count(), 5);
   await extract().click();
-  await page.getByRole('button', {name: '관심사를 추출하고 있어요…', exact: true}).waitFor();
+  await page.getByRole('button', {name: '분석·정규화하고 있어요…', exact: true}).waitFor();
   assert.equal(await page.getByRole('checkbox', {disabled: true}).count(), 6);
   completeExtraction();
   await page.getByText('관심사 1개를 비공개로 등록했어요.', {exact: true}).waitFor();

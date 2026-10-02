@@ -52,7 +52,7 @@ async function embeddings(embedTexts,texts,signal){
  return validateVectors(response,texts.length);
 }
 
-function sourceEvidence(record){return record.evidence?`${record.label} · ${record.evidence}`:record.label;}
+function sourceEvidence(record){return record.evidenceOnly?record.evidence:(record.evidence?`${record.label} · ${record.evidence}`:record.label);}
 
 export async function loadInterestTopics(db,owner,currentInterests){
  const safeOwner=String(owner||'');if(!safeOwner)return [];
@@ -114,7 +114,7 @@ export async function normalizeInterestRecords(records,existingTopics,{embedText
  const source=[],sourceIds=new Set();
  for(const row of Array.isArray(records)?records.slice(0,40):[]){
   const id=typeof row?.id==='string'?row.id.trim():'',label=cleanText(row?.label,120),category=cleanCategory(row?.category,true),evidence=cleanText(row?.evidence,500),url=typeof row?.url==='string'&&row.url.length<=500&&/^https:\/\//i.test(row.url)?row.url:undefined;
-  if(!id||id.length>100||sourceIds.has(id)||!label)continue;sourceIds.add(id);source.push({id,label,category,evidence,...(url?{url}:{})});
+  if(!id||id.length>100||sourceIds.has(id)||!label||(row?.evidenceOnly===true&&!evidence))continue;sourceIds.add(id);source.push({id,label,category,evidence,...(row?.evidenceOnly===true?{evidenceOnly:true}:{}),...(url?{url}:{})});
  }
  if(!source.length)return {interests:[],topics:[],stats:{reused:0,created:0,rejected:0}};
  const catalog=[],catalogKeys=new Set(),catalogIds=new Set(),blockedKeys=new Set();
