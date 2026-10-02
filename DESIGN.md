@@ -5,7 +5,7 @@
 - Last refreshed: 2026-10-03
 - Primary product surfaces: Expo web, iOS/Android UI; account service and separate local example experience.
 - Evidence reviewed: `mobile/DemoApp.tsx`, `mobile/demo-api.ts`, `shared/demo-types.ts`, `README.md`; current sibling `../SAI/mobile/App.tsx`, `../SAI/mobile/GroupPlanner.tsx`, service API and matching/grouping modules.
-- User direction: keep SAI--Demo2 UI/UX and bring in SAI functionality. No separate brand assets or screenshot reference supplied.
+- User direction: keep SAI--Demo2 UI/UX and bring in SAI functionality. Use the supplied `SAI image.png` as the header logo in the account and example experiences.
 
 ## Brand
 - Personality: calm, approachable Korean social-interest app.
@@ -40,7 +40,7 @@
 - Spacing/layout rhythm: 24px horizontal content, 13–20px card spacing.
 - Shape/radius/elevation: 12–19px rounded controls/cards; quiet panels, minimal borders, no new shadows.
 - Motion: scroll to top on page transitions; existing progress spinner; cancellable AI work.
-- Imagery/iconography: Ionicons, circular user avatars, QR for real share links.
+- Imagery/iconography: supplied `SAI image.png` header logo (104 × 40px, contain); Ionicons, circular user avatars, QR for real share links.
 
 ## Components
 - Existing components to reuse: DemoApp Button, Avatar, Heading, Card, Section, Tag, Empty, Score, TopicRow, QualityRow, SourceList and styles.
