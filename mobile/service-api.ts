@@ -1,6 +1,6 @@
 import {Platform} from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import type {Profile} from '../shared/matching';
+import type {Profile, Match} from '../shared/matching';
 
 const API = (process.env.EXPO_PUBLIC_API_URL || (Platform.OS === 'web' ? '' : 'http://localhost:8788')).replace(/\/$/, '');
 const SESSION_KEY = 'sai-session';
@@ -22,6 +22,7 @@ export type Assignment = {
   groups: string[][];
   unassigned: string[];
   created?: string;
+  bridgeTopics?: Match[];
 };
 
 export type Room = {
@@ -30,6 +31,7 @@ export type Room = {
   name: string;
   created: string;
   count: number;
+  isDemo?: boolean;
 };
 
 export type RoomDetails = Omit<Room, 'count'> & {

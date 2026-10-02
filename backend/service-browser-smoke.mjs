@@ -49,7 +49,7 @@ try {
   const context = await browser.newContext({viewport: {width: 390, height: 900}});
   const page = await context.newPage();
   const errors = [];
-  page.on('pageerror', error => errors.push(error.message));
+  page.on('pageerror', error => {errors.push(error.message); console.error('Browser runtime error:', error.message);});
   await mkdir('.data/qa', {recursive: true});
   await page.goto(origin);
   await page.getByText('대화의 시작을 찾는 사이', {exact: true}).waitFor();
@@ -71,18 +71,49 @@ try {
   await page.getByText('나를 알아가는 사이', {exact: true}).waitFor();
   const token = await page.evaluate(() => localStorage.getItem('sai-session'));
   const me = (await call(undefined, token)).me;
+  const defaults = await call(undefined, token);
+  assert.equal(defaults.friends.filter(person => person.isDemo).length, 24);
+  const demoRoom = defaults.rooms.find(room => room.isDemo);
+  assert(demoRoom && demoRoom.count === 25);
   assert(me.interests.find(t => t.label === '재즈').shared);
   assert(!me.interests.find(t => t.label === '나만의 취향').shared);
   const publicMe = (await call(undefined, '', '?profile=' + me.id)).profile;
   assert(!publicMe.interests.some(t => t.label === '나만의 취향'));
   console.log('PASS browser registration, profile editing, explicit sharing, and private defaults');
 
+  await page.getByRole('tab', {name: '친구', exact: true}).click();
+  await page.getByRole('checkbox', {name: '민수 예시 프로필 선택', exact: true}).waitFor();
+  assert.equal(await page.getByRole('checkbox', {name: /예시 프로필 선택$/}).count(), 24);
+  await page.screenshot({path: '.data/qa/default-demo-friends-mobile.png', fullPage: true});
+  await page.getByRole('tab', {name: '그룹', exact: true}).click();
+  await page.getByRole('button', {name: '24명 데모 모임 예시 모임 열기', exact: true}).click();
+  await page.getByText('모임 편성하기', {exact: true}).click();
+  await page.getByText('누구와 함께할까요?', {exact: true}).waitFor();
+  await page.getByText('24명 선택됨', {exact: true}).waitFor();
+  await page.getByRole('checkbox', {name: '민수 예시 프로필 선택', exact: true}).waitFor();
+  assert.equal(await page.getByRole('checkbox', {checked: true}).count(), 24);
+  assert.equal(await page.getByRole('checkbox', {name: '나의프로필 선택', exact: true}).getAttribute('aria-checked'), 'false');
+  await page.getByText('다음', {exact: true}).click();
+  await page.getByText('그룹 추천하기', {exact: true}).click();
+  await page.getByText('이 조합은 어때요?', {exact: true}).waitFor({timeout: 30000});
+  await page.getByRole('button', {name: '테이블 1 상세 보기', exact: true}).click();
+  await page.getByText('예시 데이터 · Demo', {exact: true}).first().waitFor();
+  await page.screenshot({path: '.data/qa/default-demo-evidence-mobile.png', fullPage: true});
+  await page.getByText('뒤로', {exact: true}).click();
+  await page.getByText('이 편성으로 결정', {exact: true}).click();
+  await page.getByText('확정 편성 보기', {exact: true}).waitFor();
+  const demoPlan = (await call(undefined, token, '?room=' + demoRoom.id)).selectedRoom.plan;
+  assert.equal(demoPlan.selected.length, 24);
+  assert.equal(new Set(demoPlan.groups.flat()).size, 24);
+  assert(!demoPlan.selected.includes(me.id));
+  console.log('PASS browser default 24 demo friends, example labels/evidence, demo-only selection, real CP-SAT, and confirmation');
+
   await call({action: 'requestFriend', id: me.id}, friends[0].token);
   await page.getByRole('tab', {name: '친구', exact: true}).click();
   await page.getByText('새로고침', {exact: true}).click();
   await page.getByText('수락', {exact: true}).click();
   await page.getByRole('checkbox', {name: '친구1 선택', exact: true}).click();
-  await page.getByText('공통 관심사 보기', {exact: true}).click();
+  await page.getByText('함께 이야기할 주제 보기', {exact: true}).click();
   await page.getByText('함께 나눌 이야기', {exact: true}).waitFor();
   await page.getByRole('button', {name: /1위 재즈/}).click();
   await page.getByText('사용자별 근거', {exact: true}).waitFor();
@@ -115,6 +146,7 @@ try {
   const room = (await call(undefined, token)).rooms[0];
   for (const friend of friends) await call({action: 'joinRoom', id: room.id}, friend.token);
   await page.reload();
+  await page.waitForLoadState('networkidle');
   await page.getByRole('tab', {name: '그룹', exact: true}).click();
   await page.getByRole('button', {name: '브라우저 통합 모임 모임 열기', exact: true}).click();
   await page.getByText('모임 편성하기', {exact: true}).click();
@@ -131,6 +163,7 @@ try {
   const saved = (await call(undefined, token, '?room=' + room.id)).selectedRoom.plan;
   assert.equal(saved.groups.flat().length, 6); assert.equal(new Set(saved.groups.flat()).size, 6);
   await page.reload();
+  await page.waitForLoadState('networkidle');
   await page.getByRole('tab', {name: '그룹', exact: true}).click();
   await page.getByRole('button', {name: '브라우저 통합 모임 모임 열기', exact: true}).click();
   await page.getByText('확정 편성 보기', {exact: true}).click();
@@ -183,6 +216,7 @@ try {
   const guest = await browser.newPage({viewport: {width: 390, height: 900}});
   guest.on('pageerror', error => errors.push(error.message));
   await guest.goto(origin + '/?room=' + room.id);
+  await guest.waitForLoadState('networkidle');
   await guest.getByLabel('아이디', {exact: true}).fill('seed_1');
   // Create a separate account through the UI so the received invite must survive profile setup.
   await guest.getByRole('tab', {name: '회원가입', exact: true}).click();

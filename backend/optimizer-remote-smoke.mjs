@@ -52,6 +52,22 @@ async function testUsesBoundedTimeout(){
  assert.equal(timeoutMs,25_000);
 }
 
+async function testPreservesCallerCancellation(){
+ const controller=new AbortController(),reason=new DOMException('caller cancelled','AbortError');
+ let entered;const started=new Promise(resolve=>entered=resolve);let receivedSignal;
+ const pending=withFetch(async(_url,{signal})=>{
+  receivedSignal=signal;entered();
+  return new Promise((_resolve,reject)=>{
+   const abort=()=>reject(signal.reason);
+   if(signal.aborted)abort();else signal.addEventListener('abort',abort,{once:true});
+  });
+ },()=>remoteOptimizer(config)(people,matches,4,controller.signal));
+ await started;controller.abort(reason);
+ await assert.rejects(pending,error=>error===reason);
+ assert(receivedSignal.aborted);
+ assert.equal(receivedSignal.reason,reason);
+}
+
 async function testHandlesNetworkAndHttpErrors(){
  await withFetch(async()=>{throw new Error('socket closed');},async()=>{
   await assert.rejects(remoteOptimizer(config)(people,matches,4),/CP-SAT 서버에 연결하지 못했어요/);
@@ -101,6 +117,7 @@ try{
  await testRequiresConfiguration();
  await testSendsAuthenticatedRequestAndReturnsPlans();
  await testUsesBoundedTimeout();
+ await testPreservesCallerCancellation();
  await testHandlesNetworkAndHttpErrors();
  await testRejectsMalformedJson();
  await testRejectsMissingPlans();

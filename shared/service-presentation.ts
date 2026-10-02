@@ -1,15 +1,16 @@
 import {interestScore, type GroupPlan} from './grouping.ts';
+import {conversationTopicScore} from './conversation-topics.ts';
 import type {Match, Profile, Interest} from './matching.ts';
 import type {CommonInterest, DemoEvidence, DemoPlan, DemoProfile} from './demo-types.ts';
 
 const normalizedPercent = (value: number) => Math.round(value * 100);
-const matchType = (kind: Match['kind']): CommonInterest['matchType'] => kind === 'exact' ? 'Exact' : kind === 'related' ? 'Category' : 'Semantic';
+const matchType = (kind: Match['kind']): CommonInterest['matchType'] => kind === 'exact' ? 'Exact' : kind === 'related' ? 'Category' : kind === 'bridge' ? 'Bridge' : 'Semantic';
 
 export function toEvidence(interest: Interest): DemoEvidence {
   return {
     id: interest.id,
     source: interest.source?.kind ?? 'manual',
-    title: interest.label,
+    title: interest.source?.kind === 'demo' ? interest.source.label : interest.label,
     text: interest.source?.detail || interest.source?.label || '직접 등록한 관심사',
     ...(interest.source?.url ? {url: interest.source.url} : {}),
   };
@@ -21,6 +22,7 @@ export function toDemoProfile(profile: Profile): DemoProfile {
     name: profile.name,
     avatar: profile.avatar,
     color: profile.color,
+    isDemo: profile.isDemo,
     interests: profile.interests.map(interest => ({
       id: interest.id,
       label: interest.label,
@@ -35,7 +37,8 @@ export function toCommonInterest(match: Match, people: Profile[]): CommonInteres
   const peopleById = new Map(people.map(person => [person.id, person]));
   const members = match.members.filter(id => peopleById.has(id));
   const score = interestScore({...match, members}, people);
-  const referenceStrength = normalizedPercent(match.kind === 'exact' ? 1 : match.similarity ?? .6);
+  const scopedTopic = match.conversationScore === undefined ? undefined : conversationTopicScore({...match,members},people);
+  const referenceStrength = normalizedPercent(match.kind === 'exact' ? 1 : scopedTopic?.consensus ?? match.consensus ?? match.similarity ?? .6);
   return {
     id: match.id,
     label: match.label,
@@ -48,12 +51,14 @@ export function toCommonInterest(match: Match, people: Profile[]): CommonInteres
       return {
         profileId,
         profileName: person.name,
-        score: rows.length ? referenceStrength : 0,
+        score: rows.length ? normalizedPercent(match.relevance?.[profileId] ?? (match.kind === 'exact' ? 1 : match.similarity ?? .6)) : 0,
         interestLabels: [...new Set(rows.map(item => item.label))],
+        ...(match.relevance?.[profileId]!==undefined?{relevance:match.relevance[profileId]}:{}),
+        ...(match.connections?.find(connection=>connection.profile===profileId)?.reason?{explanation:match.connections.find(connection=>connection.profile===profileId)!.reason}:{}),
         sources: rows.map((item, index) => ({
           id: `${match.id}-${profileId}-${index}`,
           source: item.source?.kind ?? 'manual',
-          title: item.label,
+          title: item.source?.kind === 'demo' ? item.source.label : item.label,
           text: item.source?.detail || item.source?.label || '직접 등록한 관심사',
           ...(item.source?.url ? {url: item.source.url} : {}),
         })),
@@ -63,6 +68,8 @@ export function toCommonInterest(match: Match, people: Profile[]): CommonInteres
     evidenceStrength: referenceStrength,
     matchType: matchType(match.kind),
     reason: match.reason,
+    ...(scopedTopic||match.consensus!==undefined?{consensus:normalizedPercent(scopedTopic?.consensus??match.consensus!)}:{}),
+    ...(match.connections?{explanations:Object.fromEntries(match.connections.flatMap(connection=>connection.reason?[[connection.profile,connection.reason]]:[]))}:{}),
   };
 }
 

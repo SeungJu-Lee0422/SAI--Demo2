@@ -23,7 +23,7 @@ export function rankSemantic(people:Profile[],vectors:number[][]):Match[]{
   const signature=selected.map(x=>tags[x.index].profile+':'+tags[x.index].id).sort().join('|');
   if(seen.has(signature))continue;seen.add(signature);
   const labels=[...new Set(selected.map(x=>tags[x.index].label))];
-  matches.push({id:'qwen3-'+matches.length,label:labels.slice(0,2).join(' · '),category:anchor.category,kind:'ai',similarity:Math.min(...selected.map(x=>x.score)),members:[...byMember.keys()],evidence:selected.map(x=>{const t=tags[x.index];return {profile:t.profile,label:t.label,...(t.source?{source:t.source}:{})};}),reason:'각 구성원의 관심사가 하나의 주제에 직접 연결되는 근거를 찾았어요.'});
+  matches.push({id:'qwen3-'+matches.length,label:labels.slice(0,2).join(' · '),category:anchor.category,kind:'ai',similarity:Math.min(...selected.map(x=>x.score)),relevance:Object.fromEntries(selected.map(x=>[tags[x.index].profile,x.score])),members:[...byMember.keys()],evidence:selected.map(x=>{const t=tags[x.index];return {profile:t.profile,label:t.label,...(t.source?{source:t.source}:{})};}),reason:'각 구성원의 관심사가 하나의 주제에 직접 연결되는 근거를 찾았어요.'});
  }
  return eligibleMatches(matches,people).sort((a,b)=>b.members.length-a.members.length||(b.similarity||0)-(a.similarity||0));
 }

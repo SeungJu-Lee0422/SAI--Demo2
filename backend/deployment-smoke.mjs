@@ -24,7 +24,7 @@ try{
  const login=await call({action:'login',username:users[0].username,password:users[0].password});
  assert.equal((await call(undefined,login.token)).me.id,ids[0]);
  await call({action:'requestFriend',id:ids[1]},users[0].token);await call({action:'acceptFriend',id:ids[0]},users[1].token);
- assert.equal((await call(undefined,users[0].token)).friends.length,1);
+ assert.equal((await call(undefined,users[0].token)).friends.filter(p=>!p.isDemo).length,1);
  room=(await call({action:'createRoom',name:'배포 검증 임시 모임'},users[0].token)).id;
  for(let i=1;i<12;i++)await call({action:'joinRoom',id:room},users[i].token);
  const result=await call({action:'optimizeGroups',room,selected:ids,size:4},users[0].token);
@@ -41,7 +41,7 @@ try{
  if(room)await DB.prepare('DELETE FROM rooms WHERE id=?').bind(room).run();
  for(const user of users){
   const account=await DB.prepare('SELECT owner FROM accounts WHERE username=?').bind(user.username).first();if(!account)continue;
-  await DB.batch([DB.prepare('DELETE FROM profiles WHERE owner=?').bind(account.owner),DB.prepare('DELETE FROM sessions WHERE owner=?').bind(account.owner),DB.prepare('DELETE FROM accounts WHERE owner=? AND username=?').bind(account.owner,user.username)]);
+  await DB.batch([DB.prepare("DELETE FROM rooms WHERE id='demo-room-' || (SELECT id FROM profiles WHERE owner=?)").bind(account.owner),DB.prepare('DELETE FROM profiles WHERE owner=?').bind(account.owner),DB.prepare('DELETE FROM sessions WHERE owner=?').bind(account.owner),DB.prepare('DELETE FROM accounts WHERE owner=? AND username=?').bind(account.owner,user.username)]);
  }
  console.log('Temporary deployment test accounts removed.');
 }

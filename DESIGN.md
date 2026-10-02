@@ -10,7 +10,7 @@
 ## Brand
 - Personality: calm, approachable Korean social-interest app.
 - Trust signals: source evidence, explicit sharing controls, real solver status, clearly labeled examples.
-- Avoid: invented interest evidence, probability claims, mixing example participants into account data.
+- Avoid: invented interest evidence, probability claims, presenting example participants as real accounts.
 
 ## Product goals
 - Goals: accounts, editable private interests, sources, accepted friends, invite rooms and real CP-SAT assignments in Demo2 screens. Accepted-friend detail includes shared social links and connection removal.
@@ -26,12 +26,14 @@
 - Primary navigation: 친구 / 그룹 / 마이.
 - Core routes/screens: login/signup, profile setup/edit, friend requests, common topics and evidence, room list/join/detail, participants, conditions, recommendations, table detail, profile sharing, source import, personal AI analysis.
 - Content hierarchy: eyebrow → heading → description → section cards → primary action.
-- Examples: explicit entry from account landing/My; visibly separate local Demo mode with return action.
+- Examples: existing 24 participants appear by default in account friends with example labels; each account gets its own labeled demo room whose planner selects the 24 examples. Explicit entry from account landing/My also opens the separate local Demo mode with return action.
 
 ## Design principles
 - Reuse Demo2 components and tokens. Keep its 600px centered shell, bottom navigation, cards and spacing.
 - Privacy decisions are visible beside each interest and each social link.
 - Show common topics only with evidence for every selected person; label partial table topics with participant coverage.
+- Conversation topics distinguish 공통 관심사 from 연결 주제. When direct topics are insufficient, opt-in Gemini discovery uses only representative public interests; Qwen3 verifies support for every person before a bridge appears or contributes to table quality.
+- Bridge detail shows each person's actual interest evidence, connection explanation, and semantic relevance. If no candidate passes validation, explain that a strong conversation topic could not be found; preserve available direct results when discovery is unavailable.
 - Tradeoffs: SAI's authenticated APIs remain separate from anonymous Demo APIs; reuse presentation without conflating sessions.
 
 ## Visual language
@@ -71,6 +73,7 @@
 ## Content voice
 - Tone: short, friendly Korean consistent with Demo2.
 - Terminology: 관심사, 공유, 친구 요청, 모임, 테이블, 편성.
+- Conversation recommendation labels: 공통 관심사 / 연결 주제; use 함께 이야기할 주제 for the combined result. Explain sharing with the generation provider before enabling discovery.
 - Microcopy rules: separate explicit likes/avoid/explore; distinguish manual input and YouTube/LinkedIn sources; score is a reference, not relationship probability.
 
 ## Implementation constraints

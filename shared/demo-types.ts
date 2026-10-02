@@ -3,13 +3,14 @@ export type DemoEvidence = { id: string; source: DemoSource; title: string; text
 export type DemoRecord = DemoEvidence & { kind?: string };
 export type DemoInterest = {
   id: string; label: string; category: string; score: number; evidence: DemoEvidence[];
-  matchType?: 'Exact' | 'Category' | 'Semantic';
+  matchType?: 'Exact' | 'Category' | 'Semantic' | 'Bridge';
 };
 export type DemoProfile = { id: string; name: string; avatar?: string; color: string; interests: DemoInterest[]; isDemo?: boolean };
 export type CommonInterest = {
   id: string; label: string; category: string; score: number; members: string[];
-  evidence: { profileId: string; profileName: string; score: number; interestLabels: string[]; sources: DemoEvidence[] }[];
-  commonality: number; evidenceStrength: number; matchType: 'Exact' | 'Category' | 'Semantic'; reason: string;
+  evidence: { profileId: string; profileName: string; score: number; interestLabels: string[]; sources: DemoEvidence[]; explanation?: string; relevance?: number }[];
+  commonality: number; evidenceStrength: number; matchType: 'Exact' | 'Category' | 'Semantic' | 'Bridge'; reason: string;
+  consensus?: number; explanations?: Record<string,string>;
 };
 export type DemoGroupQuality = { topicStrength: number; memberBalance: number; topicBreadth: number; pairCoverage: number; groupUtility: number };
 export type DemoGroup = { id: string; memberIds: string[]; score: number; interests: CommonInterest[]; quality: DemoGroupQuality };

@@ -4,7 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import {api} from './api.mjs';
-import {semanticPairs} from './semantic.mjs';
+import {semanticPairs,validateBridgeTopics} from './semantic.mjs';
 import {optimizeGroups} from './group-optimizer.mjs';
 import {createDemoStore} from './demo-store.mjs';
 import {createDemoApi} from './demo-api.mjs';
@@ -20,7 +20,7 @@ const server=createServer(async(req,res)=>{try{
 const url=new URL(req.url,`http://${req.headers.host}`);if(url.pathname.startsWith('/api/')){let body='';for await(const chunk of req){body+=chunk;if(Buffer.byteLength(body)>16*1024*1024){res.writeHead(413);res.end('too large');return;}}
 const request=new Request(url,{method:req.method,headers:req.headers,...(body?{body}: {})});let result;
 if(url.pathname.startsWith('/api/demo/'))result=await demoApi(request);
-else if(url.pathname==='/api/app')result=await api(request,{DB,OPENAI_API_KEY:process.env.OPENAI_API_KEY,OPENAI_MODEL:process.env.OPENAI_MODEL,OLLAMA_URL:process.env.OLLAMA_URL,OLLAMA_MODEL:process.env.OLLAMA_MODEL,YOUTUBE_CLIENT_ID:process.env.YOUTUBE_CLIENT_ID,YOUTUBE_CLIENT_SECRET:process.env.YOUTUBE_CLIENT_SECRET,YOUTUBE_REDIRECT_URI:process.env.YOUTUBE_REDIRECT_URI||url.origin+'/api/app?action=youtubeCallback',semanticPairs,optimizeGroups});
+else if(url.pathname==='/api/app')result=await api(request,{DB,OPENAI_API_KEY:process.env.OPENAI_API_KEY,OPENAI_MODEL:process.env.OPENAI_MODEL,OLLAMA_URL:process.env.OLLAMA_URL,OLLAMA_MODEL:process.env.OLLAMA_MODEL,YOUTUBE_CLIENT_ID:process.env.YOUTUBE_CLIENT_ID,YOUTUBE_CLIENT_SECRET:process.env.YOUTUBE_CLIENT_SECRET,YOUTUBE_REDIRECT_URI:process.env.YOUTUBE_REDIRECT_URI||url.origin+'/api/app?action=youtubeCallback',semanticPairs,validateBridgeTopics,GEMINI_API_KEY:process.env.GEMINI_API_KEY,GEMINI_MODEL:process.env.GEMINI_MODEL,optimizeGroups});
 else result=Response.json({error:'not found'},{status:404});
 res.writeHead(result.status,Object.fromEntries(result.headers));res.end(Buffer.from(await result.arrayBuffer()));return;}
 const root=path.resolve('dist/client'),file=path.resolve(root,'.'+decodeURIComponent(url.pathname));if(!file.startsWith(root+path.sep)&&file!==root){res.writeHead(403);res.end();return;}const chosen=fs.existsSync(file)&&fs.statSync(file).isFile()?file:path.join(root,'index.html');if(!fs.existsSync(chosen)){res.writeHead(200,{'Content-Type':'text/plain;charset=utf-8'});res.end('사이 API 준비 완료. 휴대폰에서 Expo 앱을 실행하세요.');return;}

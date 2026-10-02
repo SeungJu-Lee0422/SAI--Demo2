@@ -1,12 +1,14 @@
 import {canonical,positiveInterests,eligibleMatches,type Profile,type Match} from './matching.ts';
-export function interestScore(m:Match,people:Profile[]){const ids=new Set(people.map(p=>p.id));const coverage=m.members.filter(id=>ids.has(id)).length/Math.max(1,people.length);return Math.round(100*coverage*(m.kind==='exact'?1:Math.min(1,Math.max(0,m.similarity??.6))));}
+import {conversationTopicScore} from './conversation-topics.ts';
+const validBridge=(match:Match,people:Profile[])=>{if(match.kind!=='bridge')return true;const result=conversationTopicScore(match,people);return match.validation?.model==='Qwen3-Embedding-0.6B'&&result.consensus>=.65&&people.every(person=>match.members.includes(person.id)&&match.evidence.some(item=>item.profile===person.id)&&Number.isFinite(match.relevance?.[person.id])&&(match.relevance?.[person.id]||0)>=.60);};
+export function interestScore(m:Match,people:Profile[]){if(m.conversationScore!==undefined)return Math.round(100*Math.min(1,Math.max(0,conversationTopicScore(m,people).conversationScore)));const ids=new Set(people.map(p=>p.id));const coverage=m.members.filter(id=>ids.has(id)).length/Math.max(1,people.length);return Math.round(100*coverage*(m.kind==='exact'?1:Math.min(1,Math.max(0,m.similarity??.6))));}
 export function rankInterests(matches:Match[],people:Profile[]){
  const ids=new Set(people.map(p=>p.id));
- const scoped=matches.map(m=>({...m,members:m.members.filter(id=>ids.has(id)),evidence:m.evidence.filter(e=>ids.has(e.profile))})).filter(m=>m.members.length>=2);
+ const scoped=matches.filter(m=>validBridge(m,people)).map(m=>{const scopedMatch={...m,members:m.members.filter(id=>ids.has(id)),evidence:m.evidence.filter(e=>ids.has(e.profile))};if(m.conversationScore===undefined)return scopedMatch;const result=conversationTopicScore(scopedMatch,people);return {...scopedMatch,consensus:result.consensus,conversationScore:result.conversationScore};}).filter(m=>m.kind==='bridge'||m.members.length>=2);
  return eligibleMatches(scoped,people).sort((a,b)=>interestScore(b,people)-interestScore(a,people)||b.members.length-a.members.length||a.label.localeCompare(b.label));
 }
 export function suggestGroups(people:Profile[],matches:Match[],size=4,mode:PlanMode='cohesion'){
- const safe=eligibleMatches(matches,people);const limit=Math.max(2,Math.min(6,size));
+ const safe=eligibleMatches(matches,people).filter(match=>{if(match.kind!=='bridge')return true;const supported=people.filter(person=>match.members.includes(person.id));return supported.length>=2&&validBridge(match,supported);});const limit=Math.max(2,Math.min(6,size));
  const tags=new Map(people.map(p=>[p.id,positiveInterests(p)]));
  const key=(a:string,b:string)=>JSON.stringify([a,b].sort());const edgesByPair=new Map<string,Match[]>();const pairCache=new Map<string,number>();
  for(const m of safe)for(let i=0;i<m.members.length;i++)for(let j=i+1;j<m.members.length;j++){const k=key(m.members[i],m.members[j]);const list=edgesByPair.get(k)||[];list.push(m);edgesByPair.set(k,list);}
@@ -14,7 +16,7 @@ export function suggestGroups(people:Profile[],matches:Match[],size=4,mode:PlanM
   const k=key(a,b);if(pairCache.has(k))return pairCache.get(k)!;
   const aa=tags.get(a)||[],bb=tags.get(b)||[];if(!aa.length||!bb.length)return 0;
   const edges=edgesByPair.get(k)||[];if(!edges.length){pairCache.set(k,0);return 0;}
-  const best=(from:string,to:string)=>{const own=tags.get(from)||[],other=tags.get(to)||[];return own.reduce((sum,t)=>sum+Math.max(0,...other.map(u=>Math.max(0,...edges.filter(m=>m.category===t.category&&m.evidence.some(e=>e.profile===from&&canonical(e.label)===canonical(t.label))&&m.evidence.some(e=>e.profile===to&&canonical(e.label)===canonical(u.label))).map(m=>m.kind==='exact'?1:m.similarity||.6)))),0)/own.length;};
+  const best=(from:string,to:string)=>{const own=tags.get(from)||[],other=tags.get(to)||[];return own.reduce((sum,t)=>sum+Math.max(0,...other.map(u=>Math.max(0,...edges.filter(m=>(m.kind==='bridge'||m.category===t.category)&&m.evidence.some(e=>e.profile===from&&canonical(e.label)===canonical(t.label))&&m.evidence.some(e=>e.profile===to&&canonical(e.label)===canonical(u.label))).map(m=>m.kind==='exact'?1:m.kind==='bridge'?Math.min(m.relevance?.[from]||0,m.relevance?.[to]||0):m.similarity||.6)))),0)/own.length;};
   const score=(best(a,b)+best(b,a))/2;pairCache.set(k,score);return score;
  };
  // Complete-link grouping: every new member must have a positive connection to every member.
@@ -41,7 +43,7 @@ export function scoreGroup(people:Profile[],matches:Match[],ids:string[]):GroupM
  const pp=people.filter(p=>ids.includes(p.id)),topics=rankInterests(matches,pp).slice(0,3);
  const weights=topics.map(m=>interestScore(m,pp)/100);
  const topicStrength=weights.length?weights.reduce((sum,n)=>sum+n,0)/weights.length:0;
- const memberSupport=pp.map(p=>Math.max(0,...topics.filter(m=>m.members.includes(p.id)).map(m=>m.kind==='exact'?1:m.similarity??.6)));
+ const memberSupport=pp.map(p=>Math.max(0,...topics.filter(m=>m.members.includes(p.id)).map(m=>m.kind==='exact'?1:m.kind==='bridge'?m.relevance?.[p.id]||0:m.similarity??.6)));
  const memberBalance=memberSupport.length?Math.min(...memberSupport):0;
  const topicBreadth=Math.min(1,new Set(topics.map(m=>m.category)).size/3);
  const linkedPairs=new Set<string>();

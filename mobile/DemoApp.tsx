@@ -43,8 +43,8 @@ function Metric({label, value, suffix}: {label: string; value: number | string; 
   return <View style={s.metric}><Text style={s.metricLabel}>{label}</Text><Text style={s.metricValue}>{value}<Text style={s.metricSuffix}>{suffix || ''}</Text></Text></View>;
 }
 function Score({value, large}: {value: number; large?: boolean}) {return <Text style={[s.score, large && s.scoreLarge]}>{Math.round(value)}<Text style={s.scoreUnit}> 점</Text></Text>;}
-function TopicRow({topic, index, onPress}: {topic: {id: string; label: string; category?: string; score: number}; index: number; onPress: () => void}) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={`${index + 1}위 ${topic.label} ${Math.round(topic.score)}점 상세 보기`} onPress={onPress} style={({pressed}) => [s.topicRow, pressed && {backgroundColor: surface}]}><Text style={s.rank}>{String(index + 1).padStart(2, '0')}</Text><View style={s.flex}><Text style={s.topicTitle}>{topic.label}</Text><Text style={s.small}>{topic.category || '관심사'} · 근거 보기</Text></View><Score value={topic.score}/><Icon name="chevron-forward" color={muted} size={17}/></Pressable>;
+function TopicRow({topic, index, onPress, badge}: {topic: {id: string; label: string; category?: string; score: number}; index: number; onPress: () => void; badge?: string}) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${index + 1}위 ${topic.label} ${Math.round(topic.score)}점 상세 보기`} onPress={onPress} style={({pressed}) => [s.topicRow, pressed && {backgroundColor: surface}]}><Text style={s.rank}>{String(index + 1).padStart(2, '0')}</Text><View style={s.flex}><Text style={s.topicTitle}>{topic.label}</Text><Text style={s.small}>{badge ? `${badge} · ` : ''}{topic.category || '관심사'} · 근거 보기</Text></View><Score value={topic.score}/><Icon name="chevron-forward" color={muted} size={17}/></Pressable>;
 }
 function QualityRow({label, score}: {label: string; score: number}) {
   return <View style={s.qualityRow}><Text style={s.body}>{label}</Text><View style={s.qualityTrack}><View style={[s.qualityBar, {width: `${Math.max(0, Math.min(100, score))}%`}]}/></View><Text style={s.qualityValue}>{Math.round(score)}</Text></View>;

@@ -1,16 +1,22 @@
 export type Preference='like'|'avoid'|'explore';
-export type SourceEvidence={kind:'youtube'|'linkedin';label:string;detail?:string;url?:string};
+export type SourceEvidence={kind:'youtube'|'linkedin'|'demo';label:string;detail?:string;url?:string};
 export type Interest={id:string;label:string;category:string;shared:boolean;preference?:Preference;source?:SourceEvidence};
-export type Profile={id:string;name:string;bio:string;color:string;interests:Interest[];avatar?:string;instagramHandle?:string;instagramVisible?:boolean;linkedinHandle?:string;linkedinVisible?:boolean};
-export type Match={id:string;label:string;category:string;kind:'exact'|'related'|'ai';members:string[];evidence:{profile:string;label:string;source?:SourceEvidence}[];reason:string;similarity?:number};
+export type Profile={id:string;name:string;bio:string;color:string;interests:Interest[];avatar?:string;instagramHandle?:string;instagramVisible?:boolean;linkedinHandle?:string;linkedinVisible?:boolean;isDemo?:boolean};
+export type Match={id:string;label:string;category:string;kind:'exact'|'related'|'ai'|'bridge';members:string[];evidence:{profile:string;label:string;source?:SourceEvidence}[];reason:string;similarity?:number;relevance?:Record<string,number>;consensus?:number;conversationScore?:number;validation?:{model:'Qwen3-Embedding-0.6B';coverage:number;specificity:number;evidenceStamp?:string};connections?:{profile:string;interests:string[];reason?:string}[]};
 export const categories=['전체','음악','게임','여행','운동','콘텐츠','음식','공부·일','기타'];
 export const preferenceNames={like:'좋아해요',avoid:'피하고 싶어요',explore:'해보고 싶어요'};
 export const preferenceQuestions={like:'무엇을 좋아해요?',avoid:'무엇을 싫어하거나 피하고 싶어요?',explore:'새롭게 해보고 싶은 것은요?'};
 export function preferenceOf(t:Interest):Preference{return t.preference||'like';}
 export function positiveInterests(p:Profile){return p.interests.filter(t=>t.shared&&preferenceOf(t)!=='avoid');}
 export function eligibleMatches(matches:Match[],profiles:Profile[]){
- const avoided=new Set(profiles.flatMap(p=>p.interests.filter(t=>t.shared&&preferenceOf(t)==='avoid').map(t=>t.category+':'+canonical(t.label))));
- return matches.filter(m=>!avoided.has(m.category+':'+canonical(m.label))&&!m.evidence.some(e=>avoided.has(m.category+':'+canonical(e.label))));
+ return matches.filter(m=>{
+  const relevant=m.kind==='bridge'?profiles.filter(profile=>m.members.includes(profile.id)):profiles;
+  const avoided=new Set(relevant.flatMap(p=>p.interests.filter(t=>t.shared&&preferenceOf(t)==='avoid').map(t=>t.category+':'+canonical(t.label))));
+  if(avoided.has(m.category+':'+canonical(m.label))||m.evidence.some(e=>avoided.has(m.category+':'+canonical(e.label))))return false;
+  if(m.kind!=='bridge')return true;
+  const avoidedLabels=new Set(relevant.flatMap(p=>p.interests.filter(t=>t.shared&&preferenceOf(t)==='avoid').map(t=>canonical(t.label))));
+  return !avoidedLabels.has(canonical(m.label))&&!m.evidence.some(e=>avoidedLabels.has(canonical(e.label)));
+ });
 }
 const aliases:Record<string,string>={'데이식스':'day6','데식':'day6','day6':'day6','하데스':'hades','hades':'hades','인공지능':'ai','ai/ml':'ai','머신러닝':'machinelearning','기계학습':'machinelearning','넷플릭스':'netflix'};
 export function canonical(s:string){const k=s.toLowerCase().replace(/[\s·_\-]/g,'');return aliases[k]||k;}

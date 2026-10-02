@@ -22,7 +22,7 @@ await call({action:'requestFriend',id:aid},b);
 assert.equal((await call(undefined,b,'?profile='+aid)).data.profile.instagramHandle,undefined);
 await call({action:'acceptFriend',id:bid},a);
 assert.equal((await call(undefined,b,'?profile='+aid)).data.profile.instagramHandle,'example_user');
-assert.equal((await call(undefined,b)).data.friends[0].instagramHandle,'example_user');
+assert.equal((await call(undefined,b)).data.friends.find(p=>p.id===aid).instagramHandle,'example_user');
 const room=(await call({action:'createRoom',name:'테스트 모임'},a)).data.id;
 await call({action:'joinRoom',id:room},c);
 assert((await call(undefined,c,'?room='+room)).data.selectedRoom.members.every(p=>p.instagramHandle===undefined));
@@ -43,7 +43,7 @@ assert.equal(findMatches([{id:'a',interests:[{...liked,preference:undefined}]},{
 assert.equal(normalizeInstagram('@Example_User'),'example_user');assert.throws(()=>normalizeInstagram('https://instagram.com.evil.invalid/name'));
 sqlite.exec('ALTER TABLE profiles DROP COLUMN instagram_handle; ALTER TABLE profiles DROP COLUMN instagram_visible;');
 await ensureProfileColumns(DB);await ensureProfileColumns(DB);
-assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM profiles').get().n,3);
+assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM profiles WHERE owner NOT LIKE 'demo:%'").get().n,3);
 assert.equal(sqlite.prepare('SELECT instagram_visible FROM profiles WHERE id=?').get(aid).instagram_visible,'private');
 console.log('PASS: persisted preferences, backward compatibility, avoidance filtering, Qwen3 input filtering, Instagram anonymous/pending/room denial, accepted-friend access, revocation, URL validation');
 
