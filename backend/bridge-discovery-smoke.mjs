@@ -57,6 +57,8 @@ async function testRequestAndPrivacy(){
  assert.equal(body.response_format.type,'text');
  assert.equal(body.response_format.mime_type,'application/json');
  assert.equal(body.response_format.schema.properties.candidates.maxItems,3);
+ assert.equal(body.response_format.schema.properties.candidates.items.properties.connections.maxItems,undefined,'nested member bounds rejected by live Interactions are enforced locally');
+ assert.equal(body.response_format.schema.properties.candidates.items.properties.connections.items.properties.interests.maxItems,undefined,'nested reference bounds are enforced locally');
  assert(!JSON.stringify(body.response_format.schema).includes('minLength'));
  assert(!JSON.stringify(body.response_format.schema).includes('maxLength'));
  const profiles=JSON.parse(body.input.match(/PROFILES=(.*)$/m)[1]);

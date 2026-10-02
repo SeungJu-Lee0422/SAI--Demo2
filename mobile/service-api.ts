@@ -14,6 +14,7 @@ export type SourceState = {
   samples: string[];
   counts: Record<string, number>;
   errors?: string[];
+  channels?: {id: string; title: string; description: string; url: string}[];
 };
 
 export type Assignment = {

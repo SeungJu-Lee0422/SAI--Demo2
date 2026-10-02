@@ -33,6 +33,8 @@
 - Privacy decisions are visible beside each interest and each social link.
 - Show common topics only with evidence for every selected person; label partial table topics with participant coverage.
 - Conversation topics distinguish 공통 관심사 from 연결 주제. When direct topics are insufficient, opt-in Gemini discovery uses only representative public interests; Qwen3 verifies support for every person before a bridge appears or contributes to table quality.
+- YouTube connection loads source data without registering interests. Users select exactly five subscription channels, then request Gemini extraction with an input capped at 1,000 characters. Register one to five inferred interests privately and retain the selected channel evidence; keep existing interests and sharing decisions.
+- YouTube sensitive data: ask Gemini to remove personal/sensitive information and continue interest extraction. Omit any sensitive result that remains while saving valid interests; omit sensitive channel titles from saved interest evidence. If cleanup leaves no supported interests, complete with zero additions and explain the empty result.
 - Bridge detail shows each person's actual interest evidence, connection explanation, and semantic relevance. If no candidate passes validation, explain that a strong conversation topic could not be found; preserve available direct results when discovery is unavailable.
 - Tradeoffs: SAI's authenticated APIs remain separate from anonymous Demo APIs; reuse presentation without conflating sessions.
 
@@ -68,6 +70,7 @@
 - Error: preserve inputs and show dismissible server message; allow retry.
 - Success: concise saved/imported notice; refresh authenticated state.
 - Disabled: only when required fields/selection/permissions or pending request prevent the action.
+- YouTube selection: show the selected count out of five; disable additional unselected channels at the limit and extraction until five are selected. Preserve selection on errors, explain fewer than five available channels, and disclose that selected channel names/descriptions go to Gemini.
 - Offline/slow network: expose request failure; cancel browser model work when leaving the page.
 
 ## Content voice

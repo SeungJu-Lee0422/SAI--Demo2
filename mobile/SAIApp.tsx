@@ -32,8 +32,8 @@ function codeFrom(value: string, kind: 'profile' | 'room') {
   const input = value.trim();
   try {return new URL(input).searchParams.get(kind) || input;} catch {return input;}
 }
-function Choice({checked, label, detail, onPress}: {checked: boolean; label: string; detail?: string; onPress: () => void}) {
-  return <Pressable accessibilityRole="checkbox" accessibilityState={{checked}} aria-checked={checked} onPress={onPress} style={[s.row, {paddingVertical: 12}]}><View style={[s.check, checked && s.checkSelected]}>{checked && <Icon name="checkmark" size={15} color="white"/>}</View><View style={s.flex}><Text style={s.label}>{label}</Text>{detail && <Text style={s.small}>{detail}</Text>}</View></Pressable>;
+function Choice({checked, label, detail, detailLines, onPress, disabled = false}: {checked: boolean; label: string; detail?: string; detailLines?: number; onPress: () => void; disabled?: boolean}) {
+  return <Pressable accessibilityRole="checkbox" accessibilityLabel={label} accessibilityState={{checked, disabled}} aria-checked={checked} disabled={disabled} onPress={onPress} style={[s.row, {paddingVertical: 12}, disabled && s.disabled]}><View style={[s.check, checked && s.checkSelected]}>{checked && <Icon name="checkmark" size={15} color="white"/>}</View><View style={s.flex}><Text style={s.label}>{label}</Text>{detail && <Text style={s.small} numberOfLines={detailLines}>{detail}</Text>}</View></Pressable>;
 }
 
 export default function SAIApp() {
@@ -91,6 +91,8 @@ function AccountApp({onExample}: {onExample: () => void}) {
   const [table, setTable] = useState<DemoPlan['groups'][number] | null>(null);
   const [share, setShare] = useState<{title: string; url: string; code: string} | null>(null);
   const [linkedinText, setLinkedinText] = useState('');
+  const [youtubeChannelIds, setYoutubeChannelIds] = useState<string[]>([]);
+  const [youtubeAnalyzing, setYoutubeAnalyzing] = useState(false);
   const [personal, setPersonal] = useState<PersonalTopic[]>([]);
   const [ownTopic, setOwnTopic] = useState<PersonalTopic | null>(null);
   const [progress, setProgress] = useState('');
@@ -150,6 +152,10 @@ function AccountApp({onExample}: {onExample: () => void}) {
   }, [data.account, data.me, inviteVersion]);
   useEffect(() => {scroll.current?.scrollTo({y: 0, animated: false});}, [page, authMode]);
   useEffect(() => {if (!notice) return; const timer = setTimeout(() => setNotice(''), 5000); return () => clearTimeout(timer);}, [notice]);
+  useEffect(() => {
+    const available = new Set((data.sources?.youtube.channels || []).map(channel => channel.id));
+    setYoutubeChannelIds(selected => selected.filter(id => available.has(id)));
+  }, [data.sources?.youtube.channels]);
   useEffect(() => {
     const input = JSON.stringify(data.me?.interests);
     if (personalInput.current !== undefined && personalInput.current !== input && page === 'analysis' && returnPage === 'my') {
@@ -212,11 +218,20 @@ function AccountApp({onExample}: {onExample: () => void}) {
     await run(async () => {
       await serviceAction(token, 'logout', {}, lifecycle.current?.signal);
       await tokenClear(); session.current = ''; setToken(''); setData(empty); setDraft(blankProfile); setPersonal([]); setMatches([]); setPlans([]);
-      roomRef.current = undefined; setRoomId(undefined); setFriendIds([]); setCode(''); setPreview(null); setPassword(''); setConfirmation(''); navigate('friends', '친구');
+      roomRef.current = undefined; setRoomId(undefined); setFriendIds([]); setYoutubeChannelIds([]); setCode(''); setPreview(null); setPassword(''); setConfirmation(''); navigate('friends', '친구');
     });
   }
   async function saveProfile() {
     await run(async () => {await serviceAction(token, 'saveProfile', {...draft}, lifecycle.current?.signal); await load(); navigate('my', '마이'); setNotice('프로필을 저장했어요.');});
+  }
+  async function extractYouTubeInterests() {
+    await run(async () => {
+      setYoutubeAnalyzing(true);
+      try {
+        const result = await serviceAction<{count: number; summary: string}>(token, 'extractYouTubeInterests', {channelIds: youtubeChannelIds}, lifecycle.current?.signal);
+        await load(); setYoutubeChannelIds([]); setNotice(result.summary);
+      } finally {if (mounted.current) setYoutubeAnalyzing(false);}
+    });
   }
   function addInterest(interest: Interest) {
     if (draft.interests.length >= 100) {setError('관심사는 최대 100개까지 등록할 수 있어요.'); return;}
@@ -380,7 +395,34 @@ function AccountApp({onExample}: {onExample: () => void}) {
       case 'table-detail': return table && <><Heading eyebrow="TABLE DETAILS" title={`테이블 ${activePlan?.groups.findIndex(g => g.id === table.id)! + 1}`} description={names(groupPeople.filter(p => table.memberIds.includes(p.id)))}/><View style={s.avatarStack}>{groupPeople.filter(p => table.memberIds.includes(p.id)).map(p => <View key={p.id} style={s.stackPerson}><Avatar profile={toDemoProfile(p)} size={48}/><Text style={s.stackName}>{p.name}</Text></View>)}</View><Card quiet><View style={s.between}><Text style={s.label}>그룹 점수</Text><Score value={table.score} large/></View><QualityRow label="주제 강도" score={table.quality.topicStrength}/><QualityRow label="구성원 균형" score={table.quality.memberBalance}/><QualityRow label="주제 다양성" score={table.quality.topicBreadth}/><QualityRow label="쌍 연결도" score={table.quality.pairCoverage}/></Card><Section title="함께 이야기할 주제 Top 3">{table.interests.length ? table.interests.map(t => <Card key={t.id}><View style={s.between}><Text style={s.sectionTitle}>{t.label}</Text><Score value={t.score}/></View><Text style={s.small}>{t.members.length}/{table.memberIds.length}명 연결 · {topicTypeLabel(t)}</Text><Text style={[s.description, {marginVertical: 14}]}>{t.reason}</Text>{evidenceCards(t, groupPeople)}</Card>) : <Text style={s.description}>근거가 있는 공통 주제가 없어요. 편성은 배정 조건을 충족하지만 관심사 연결 점수는 낮을 수 있어요.</Text>}</Section></>;
       case 'my': return <><Heading eyebrow="UNDERSTAND YOUR INTERESTS" title="나를 알아가는 사이" description="나의 관심사를 담고, 공유할 이야기와 원문 근거를 직접 정해요."/><View style={s.profile}><Avatar profile={toDemoProfile(data.me)} size={68}/><View style={s.flex}><Text style={s.profileName}>{data.me.name}</Text><Text style={s.description}>{data.me.bio || `@${data.account.username}`}</Text><Text style={s.small}>{data.me.interests.filter(t => t.shared).length}개 공유 · {data.me.interests.filter(t => !t.shared).length}개 비공개</Text></View><Pressable accessibilityRole="button" accessibilityLabel="프로필 수정" onPress={() => editProfile()} style={s.profileEdit}><Icon name="pencil-outline"/></Pressable></View><Button secondary onPress={() => startShare('profile')}>프로필 링크 / QR 공유</Button><Section title="관심사 데이터 연결"><Pressable accessibilityRole="button" onPress={() => navigate('youtube')} style={s.integrationCard}><View style={s.integrationIcon}><Icon name="logo-youtube" size={25}/></View><View style={s.flex}><Text style={s.label}>YouTube</Text><Text style={s.small}>재생목록 · 영상 · 구독 채널</Text></View><Tag>{sourceStatus(data.sources?.youtube)}</Tag><Icon name="chevron-forward" size={17}/></Pressable><Pressable accessibilityRole="button" onPress={() => navigate('linkedin')} style={s.integrationCard}><View style={s.integrationIcon}><Icon name="logo-linkedin" size={23}/></View><View style={s.flex}><Text style={s.label}>LinkedIn</Text><Text style={s.small}>직접 입력한 프로필 텍스트</Text></View><Tag>{sourceStatus(data.sources?.linkedin)}</Tag><Icon name="chevron-forward" size={17}/></Pressable></Section><Section title="나의 관심사" action="전체 보기" onAction={() => navigate('my-interests')}>{data.me.interests.length ? <Card>{data.me.interests.slice(0, 5).map(t => <View key={t.id} style={s.topicRow}><View style={s.flex}><Text style={s.topicTitle}>{t.label}</Text><Text style={s.small}>{t.category} · {preferenceNames[preferenceOf(t)]}</Text></View><Tag>{t.shared ? '공유' : '비공개'}</Tag></View>)}</Card> : <Empty title="어떤 이야기를 좋아하세요?" text="프로필 수정에서 관심사를 직접 등록하거나 외부 데이터를 가져와보세요."/>}<Button disabled={!data.me.interests.some(t => preferenceOf(t) !== 'avoid') || busy} onPress={analyzePersonal}>내 관심사 AI 분석</Button><Text style={s.small}>나의 비공개 관심사도 분석할 수 있어요. 분석이 공개 설정을 바꾸지는 않아요. 웹 첫 분석은 약 614MB 모델을 내려받아요.</Text></Section>{data.me.instagramHandle && <Button secondary onPress={() => Linking.openURL(`https://www.instagram.com/${data.me!.instagramHandle}/`)}>Instagram 프로필 열기</Button>}{data.me.linkedinHandle && <Button secondary onPress={() => Linking.openURL(`https://www.linkedin.com/in/${data.me!.linkedinHandle}/`)}>LinkedIn 프로필 열기</Button>}<Section title="계정"><Button secondary disabled={busy} onPress={logout}>로그아웃</Button>{localDemoEnabled && <Button secondary disabled={busy} onPress={onExample}>예시 데이터로 체험하기</Button>}<Pressable accessibilityRole="button" onPress={() => setDeleteConfirm(!deleteConfirm)}><Text style={s.small}>프로필 삭제</Text></Pressable>{deleteConfirm && <Card><Text style={s.description}>프로필과 친구 연결, 모임 참여 기록을 삭제해요. 계정은 남아 있으며 새 프로필을 만들 수 있어요.</Text><Button secondary disabled={busy} onPress={() => run(async () => {await serviceAction(token, 'deleteProfile'); roomRef.current = undefined; setRoomId(undefined); await load(); setDraft(blankProfile); setFriendIds([]); navigate('profile-edit'); setNotice('프로필을 삭제했어요.');})}>프로필 삭제 확인</Button></Card>}</Section></>;
       case 'share': return share && <><Heading eyebrow="SHARE A CONNECTION" title={share.title} description="링크 또는 QR을 공유해주세요. 받은 사람은 로그인 후 친구 요청이나 모임 참여를 할 수 있어요."/><Card><View style={{alignItems: 'center', padding: 20}}><QRCode value={share.url} size={210}/></View><Text selectable style={s.small}>{share.url}</Text></Card><Button onPress={() => run(async () => {await Clipboard.setStringAsync(share.url); setNotice('링크를 복사했어요.');})}>링크 복사</Button><Button secondary onPress={() => run(async () => {await Clipboard.setStringAsync(share.code); setNotice('코드를 복사했어요.');})}>코드 복사</Button><Button secondary onPress={() => run(async () => {if (Platform.OS === 'web' && navigator.share) await navigator.share({title: share.title, url: share.url}); else if (Platform.OS !== 'web') await Share.share({message: share.url}); else {await Clipboard.setStringAsync(share.url); setNotice('공유할 링크를 복사했어요.');}})}>공유하기</Button></>;
-      case 'youtube': return <><Heading eyebrow="REAL DATA · YOUTUBE" title={'즐겨 보는 영상에서\n관심사를 찾을 수 있어요'} description="Google 계정의 읽기 전용 권한으로 실제 재생목록과 영상, 구독 채널을 가져와요."/><Card><View style={s.between}><Text style={s.sectionTitle}>YouTube</Text><Tag>{sourceStatus(data.sources?.youtube)}</Tag></View><Text style={[s.description, {marginVertical: 18}]}>가져온 관심사는 기본 비공개로 저장해요. 프로필 수정에서 내용을 확인하고 공유할 항목을 골라주세요.</Text><Button disabled={busy} onPress={() => run(async () => {const result = await serviceAction<{authUrl: string}>(token, 'startYouTubeOAuth'); if (Platform.OS === 'web') {window.open(result.authUrl, '_blank', 'noopener,noreferrer'); setNotice('연결 창에서 인증을 완료한 뒤 데이터를 새로고침해주세요.');} else await Linking.openURL(result.authUrl);})}>YouTube 연결</Button><Text style={[s.small, {marginTop: 12}]}>연결이 끝나면 이 화면으로 돌아와 데이터를 새로고침해주세요.</Text></Card><Button secondary disabled={busy} onPress={() => run(async () => {await load(); setNotice('최신 연결 데이터를 확인했어요.');})}>연결 데이터 새로고침</Button><Section title="불러온 데이터">{sourceSummary(data.sources?.youtube)}</Section><Button secondary onPress={() => editProfile()}>가져온 관심사와 공유 설정</Button></>;
+      case 'youtube': return <>
+        <Heading eyebrow="REAL DATA · YOUTUBE" title={'즐겨 보는 채널에서\n관심사를 찾을 수 있어요'} description="YouTube를 연결하고 나의 취향을 잘 보여주는 구독 채널 5개를 골라주세요."/>
+        <Card>
+          <View style={s.between}><Text style={s.sectionTitle}>YouTube</Text><Tag>{sourceStatus(data.sources?.youtube)}</Tag></View>
+          <Text style={[s.description, {marginVertical: 18}]}>연결하면 채널 목록만 불러와요. 선택한 채널을 분석한 뒤 관심사 1~5개를 비공개로 등록해요.</Text>
+          <Button disabled={busy} onPress={() => run(async () => {const result = await serviceAction<{authUrl: string}>(token, 'startYouTubeOAuth'); if (Platform.OS === 'web') {window.open(result.authUrl, '_blank', 'noopener,noreferrer'); setNotice('연결 창에서 인증을 완료한 뒤 데이터를 새로고침해주세요.');} else await Linking.openURL(result.authUrl);})}>YouTube 연결</Button>
+          <Text style={[s.small, {marginTop: 12}]}>Google 계정의 읽기 전용 권한을 사용해요. 연결을 마치면 돌아와 데이터를 새로고침해주세요.</Text>
+        </Card>
+        <Button secondary disabled={busy} onPress={() => run(async () => {await load(); setNotice('최신 연결 데이터를 확인했어요.');})}>연결 데이터 새로고침</Button>
+        <Section title="관심사를 찾을 채널 선택">
+          <Text accessibilityLiveRegion="polite" style={s.label}>{youtubeChannelIds.length}/5개 선택</Text>
+          {(data.sources?.youtube.channels || []).length ? <Card>{data.sources!.youtube.channels!.map(channel => <Choice
+            key={channel.id}
+            checked={youtubeChannelIds.includes(channel.id)}
+            label={channel.title}
+            detail={channel.description}
+            detailLines={3}
+            disabled={busy || (youtubeChannelIds.length >= 5 && !youtubeChannelIds.includes(channel.id))}
+            onPress={() => setYoutubeChannelIds(selected => selected.includes(channel.id) ? selected.filter(id => id !== channel.id) : selected.length < 5 ? [...selected, channel.id] : selected)}
+          />)}</Card> : <Empty icon="logo-youtube" title="선택할 구독 채널이 없어요" text="YouTube를 연결해 채널 목록을 불러와주세요. 이전에 연결했다면 다시 연결해주세요."/>}
+          {!!data.sources?.youtube.channels?.length && data.sources.youtube.channels.length < 5 && <Text style={s.description}>분석하려면 구독 채널이 5개 이상 필요해요. 채널을 구독한 뒤 다시 연결해주세요.</Text>}
+          <Text style={s.small}>선택한 5개 채널의 이름과 설명을 1,000자 이하로 정리해 Gemini에 전달해요. 추출한 관심사는 프로필에서 확인하고 공유 여부를 정할 수 있어요.</Text>
+          <Button disabled={busy || youtubeChannelIds.length !== 5} onPress={extractYouTubeInterests}>{youtubeAnalyzing ? '관심사를 추출하고 있어요…' : '선택한 5개 채널로 관심사 추출'}</Button>
+          {youtubeAnalyzing && <View accessibilityLiveRegion="polite" style={s.row}><ActivityIndicator color="#18181B"/><Text style={s.small}>선택한 채널에서 관심사 1~5개를 찾고 있어요.</Text></View>}
+        </Section>
+        <Section title="불러온 데이터">{sourceSummary(data.sources?.youtube)}</Section>
+        <Button secondary onPress={() => editProfile()}>등록한 관심사와 공유 설정</Button>
+      </>;
       case 'linkedin': return <><Heading eyebrow="REAL DATA · LINKEDIN" title={'경험과 기술에도\n관심사가 담겨 있어요'} description="직접 내보낸 프로필 텍스트에서 기술·경험 항목을 가져와요."/><Card quiet><Text style={s.description}>Skills, Experience, Education, Projects 또는 한국어 제목을 포함한 텍스트를 붙여넣어주세요. 새 관심사는 비공개로 저장해요.</Text></Card><TextInput accessibilityLabel="LinkedIn 가져오기 텍스트" editable={!busy} style={[s.input, s.textarea]} multiline value={linkedinText} onChangeText={setLinkedinText} maxLength={50000} placeholder={'Skills:\nReact\nSQL\nProjects:\n데이터 시각화'}/><Button disabled={busy || !linkedinText.trim()} onPress={() => run(async () => {const result = await serviceAction<{summary: string}>(token, 'importLinkedInText', {text: linkedinText}); await load(); setNotice(result.summary);})}>LinkedIn 관심사 가져오기</Button><Section title="등록한 데이터">{sourceSummary(data.sources?.linkedin)}</Section><Button secondary onPress={() => editProfile()}>가져온 관심사와 공유 설정</Button><Text style={s.small}>단순 목록은 프로필 수정의 ‘LinkedIn 목록 미리보기’로 원하는 후보만 추가할 수 있어요.</Text></>;
       case 'my-interests': return <><Heading eyebrow="YOUR INTEREST PROFILE" title="나의 관심사" description={personal.length ? 'AI가 나의 실제 관심사를 묶고 점수와 근거를 정리했어요.' : '직접 등록하거나 가져온 관심사예요. 공유 설정은 프로필 수정에서 바꿀 수 있어요.'}/>{personal.length ? <Card>{personal.map((t, i) => <TopicRow key={t.id} topic={t} index={i} onPress={() => {setOwnTopic(t); navigate('my-interest-detail');}}/>)}</Card> : data.me.interests.length ? data.me.interests.map(t => <Card key={t.id}><View style={s.between}><Text style={s.label}>{t.label}</Text><Tag>{t.shared ? '공유' : '비공개'}</Tag></View><Text style={[s.small, {marginBottom: 12}]}>{t.category} · {preferenceNames[preferenceOf(t)]}</Text><SourceList sources={[toEvidence(t)]}/></Card>) : <Empty title="등록한 관심사가 없어요" text="프로필 수정이나 데이터 연결로 관심사를 추가해주세요."/>}<Button disabled={busy || !data.me.interests.some(t => preferenceOf(t) !== 'avoid')} onPress={analyzePersonal}>내 관심사 AI 분석</Button><Button secondary onPress={() => editProfile()}>관심사와 공유 설정 수정</Button></>;
       case 'my-interest-detail': return ownTopic && <><Heading eyebrow="YOUR INTEREST EVIDENCE" title={ownTopic.label} description="AI가 이 관심사를 발견한 원문 근거예요."/><Card quiet><View style={s.between}><Text style={s.label}>관심사 점수</Text><Score value={ownTopic.score} large/></View><Text style={[s.description, {marginTop: 14}]}>{ownTopic.category} 분야</Text></Card><Section title="관심사의 근거"><Card><SourceList sources={ownTopic.evidence.map(t => toEvidence(t))}/></Card></Section><Text style={s.small}>분석 결과는 나만 확인해요. 관심사 공개 여부는 프로필의 공유 설정을 따릅니다.</Text></>;
