@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {findMatches} from '../shared/matching.ts';
+import {rankInterests,suggestGroups} from '../shared/grouping.ts';
+const profile=(id,labels)=>({id,name:id,bio:'',color:'',interests:labels.map((label,i)=>({id:id+i,label,category:'음악',shared:true}))});
+const people=[profile('a',['재즈','피아노']),profile('b',['재즈','피아노']),profile('c',['재즈']),profile('d',['록']),profile('e',[])];
+const matches=findMatches(people),g=suggestGroups(people,matches,3);
+assert.equal(rankInterests(matches,people)[0].label,'재즈');assert.deepEqual(g.groups[0].ids,['a','b','c']);assert.deepEqual(g.unassigned,['d','e']);assert(g.groups[0].score>0&&g.groups[0].score<=1);
+assert.equal(suggestGroups(people,matches,2).groups[0].ids.length,2);
+const privatePeople=people.map(p=>({...p,interests:p.interests.map(t=>({...t,shared:false}))}));assert.equal(suggestGroups(privatePeople,matches).groups.length,0);
+const chain=[profile('a',['재즈']),profile('b',['재즈','록']),profile('c',['록'])];assert(suggestGroups(chain,findMatches(chain),4).groups.every(g=>g.ids.length===2));
+const thirty=Array.from({length:30},(_,i)=>profile(String(i).padStart(2,'0'),['재즈']));const thirtyGroups=suggestGroups(thirty,findMatches(thirty),4);assert.equal(thirtyGroups.groups.flatMap(g=>g.ids).length,30);assert(thirtyGroups.groups.every(g=>g.ids.length<=4));
+console.log('PASS interest ranking, similarity grouping, 30 members, capacity, no forced chain/private matches');

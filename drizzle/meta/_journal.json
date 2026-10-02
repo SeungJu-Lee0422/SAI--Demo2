@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1790945590976,
+      "tag": "0000_odd_exiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790952972750,
+      "tag": "0001_faithful_silver_samurai",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790955205704,
+      "tag": "0002_spicy_quasimodo",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790955964857,
+      "tag": "0003_strange_clea",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790957220306,
+      "tag": "0004_dry_zarek",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1790957826373,
+      "tag": "0005_icy_network",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "사이",
+    "slug": "sai-common-ground",
+    "version": "1.0.0",
+    "scheme": "sai",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.saicommon.app"
+    },
+    "android": {
+      "package": "dev.saicommon.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "name": "사이 · 취향이 만나는 곳",
+      "favicon": "./public/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
+  }
+}
