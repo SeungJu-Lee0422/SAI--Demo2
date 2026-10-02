@@ -1,1 +1,15 @@
-{"extends":"expo/tsconfig.base","compilerOptions":{"strict":true,"allowImportingTsExtensions":true,"noEmit":true},"include":["mobile/**/*.tsx","mobile/**/*.ts","shared/**/*.ts"]}
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "allowJs": true
+  },
+  "include": [
+    "mobile/**/*.tsx",
+    "mobile/**/*.ts",
+    "shared/**/*.ts",
+    "api/**/*.ts"
+  ]
+}

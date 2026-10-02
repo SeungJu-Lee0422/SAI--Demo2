@@ -70,8 +70,24 @@ SAI_PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs node backend/servic
 
 검증 화면은 `.data/qa`에 저장합니다. 실제 Google 계정 인증은 별도 OAuth 자격증명과 사용자 인증이 필요하며, OAuth 자동 테스트는 네트워크 응답을 대체해 프로토콜·파싱을 확인합니다. 실제 기기 iOS/Android, 계정 복구와 스토어 제출은 검증하지 않았습니다.
 
-## 호스팅
+## Vercel 배포
 
-Hosted Worker에서 서비스 `/api/app`은 사용할 수 있지만 Python은 직접 실행할 수 없습니다. 별도의 `npm run solver:serve` 서비스와 `GROUP_SOLVER_URL`, `GROUP_SOLVER_TOKEN` 설정이 필요합니다. Worker 빌드가 원격 solver를 배포하지는 않습니다. 예시 `/api/demo`는 로컬 서버 전용입니다. 이번 작업은 로컬 통합이며 공개 배포는 하지 않았습니다.
+공개 주소: **https://sai-demo2.vercel.app**
+
+`vercel.json`은 Expo 웹(`dist/client`), Node.js 24 계정 API(`api/app.ts`), Python 3.12 CP-SAT 함수(`api/solver.py`)를 함께 배포합니다. 계정·관심사·친구·모임은 외부 **Turso SQLite**에 영구 저장하고, 함수의 로컬 파일에 저장하지 않습니다. 기존 SQL과 OR-Tools 구현을 재사용하며 JavaScript DB SDK를 추가하지 않았습니다.
+
+1. `vercel login` 후 `vercel link`로 프로젝트를 연결합니다.
+2. Vercel Marketplace의 `tursocloud/database` Starter 플랜을 프로젝트에 연결합니다. `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`이 런타임에 필요합니다.
+3. 배포 전에 `vercel env pull .env.local --environment=production`과 `npm run db:migrate:turso`로 빈 원격 DB의 스키마를 준비합니다. 기존 로컬 계정 데이터나 SAI 원본 DB는 가져오지 않습니다. 마이그레이션은 기록하고 재실행할 수 있습니다.
+4. 32자 이상의 임의 `GROUP_SOLVER_TOKEN`을 Production/Preview에 비밀값으로 설정합니다. Node API가 CP-SAT 함수에 인증할 때만 사용합니다. 함수 주소는 `VERCEL_PROJECT_PRODUCTION_URL`의 `/api/solver`를 기본 사용하고, 별도 서비스는 `GROUP_SOLVER_URL`로 지정합니다.
+5. `vercel deploy --prod`로 배포합니다. `/api/app`의 실제 가입·로그인·프로필·모임·편성 저장을 확인합니다.
+
+로컬 전용 예시 `/api/demo`는 Vercel에서 제공하지 않으며 배포 빌드에는 예시 체험 버튼을 표시하지 않습니다. 실제 계정 서비스는 동일한 화면과 `/api/app`을 사용합니다. 브라우저 개인 AI·친구 의미 비교는 웹 모델을 사용합니다. 서버 그룹 AI 옵션은 별도의 `semanticPairs` 실행 환경이 있어야 하며, 미설정 상태에서는 명확한 오류를 반환합니다. 기본 CP-SAT 편성은 서버 AI 없이 사용할 수 있습니다.
+
+YouTube 실계정 연결에는 별도의 Google OAuth 자격증명과 배포 주소를 사용하는 `YOUTUBE_REDIRECT_URI` 등록이 필요합니다. 비밀값은 Vercel 환경변수로만 설정하고 `EXPO_PUBLIC_*`에 넣지 않습니다. SQLite HTTP 트랜잭션은 `BEGIN → 결과 확인 → COMMIT/ROLLBACK`을 같은 연결로 실행합니다.
+
+[Expo 웹 배포 안내](https://docs.expo.dev/guides/publishing-websites/) · [Vercel 함수](https://vercel.com/docs/functions/runtimes) · [Turso HTTP API](https://docs.turso.tech/sdk/http/reference)
+
+기존 Hosted Worker 빌드도 보존합니다. Worker에서 Python을 직접 실행할 수 없어 별도 `npm run solver:serve` 서비스와 `GROUP_SOLVER_URL`, `GROUP_SOLVER_TOKEN` 설정이 필요합니다.
 
 [디자인 기준](DESIGN.md) · [알고리즘](ALGORITHM.md) · [연구와 라이선스](THIRD_PARTY.md)

@@ -1,0 +1,14 @@
+.data
+.expo
+.omx
+.openai
+.sites-runtime
+.agents
+.codex
+.env*
+dist
+node_modules
+outputs
+work
+*.docx
+*.docx:*

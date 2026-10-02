@@ -16,7 +16,9 @@
     "test": "node backend/run-smokes.mjs",
     "test:live": "node backend/live-smoke.mjs",
     "solver:setup": "node backend/setup-solver.mjs",
-    "solver:serve": "node --env-file-if-exists=.env backend/solver-service.mjs"
+    "solver:serve": "node --env-file-if-exists=.env backend/solver-service.mjs",
+    "db:migrate:turso": "node --env-file-if-exists=.env.local backend/migrate-turso.mjs",
+    "test:deployment": "node --env-file-if-exists=.env.local backend/deployment-smoke.mjs"
   },
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",
@@ -45,5 +47,8 @@
     "drizzle-kit": "0.31.10",
     "esbuild": "^0.25.0",
     "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": "24.x"
   }
 }

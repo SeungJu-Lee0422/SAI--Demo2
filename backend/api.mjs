@@ -113,6 +113,7 @@ export async function api(req,env){try{
  if(!p)return fail('먼저 내 취향을 등록해주세요.');
  if(b.action==='optimizeGroups'){
   if(!env.optimizeGroups)return fail('그룹 최적화 엔진이 아직 연결되지 않았어요. 서버 설정을 확인해주세요.',503);
+  if(b.useAI===true&&!env.semanticPairs)return fail('서버 AI 의미 비교가 아직 연결되지 않았어요. AI 옵션을 끄면 CP-SAT 편성을 사용할 수 있어요.',503);
   if(typeof b.room!=='string'||!Array.isArray(b.selected)||b.selected.length<3||b.selected.length>30||new Set(b.selected).size!==b.selected.length||b.selected.some(id=>typeof id!=='string')||![3,4,5].includes(b.size))return fail('편성 조건을 확인해주세요.');
   const member=await db.prepare('SELECT room FROM members WHERE room=? AND profile=?').bind(b.room,p.id).first();if(!member)return fail('모임에 참여한 뒤 편성을 요청해주세요.',403);
   const rows=(await db.prepare('SELECT p.* FROM profiles p JOIN members m ON m.profile=p.id WHERE m.room=?').bind(b.room).all()).results,ids=new Set(rows.map(row=>row.id));if(b.selected.some(id=>!ids.has(id)))return fail('모임에 없는 참여자가 포함되어 있어요.',403);

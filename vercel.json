@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/client",
+  "regions": ["iad1"],
+  "functions": {
+    "api/app.ts": {"maxDuration": 60, "includeFiles": "shared/**/*.ts"},
+    "api/solver.py": {
+      "maxDuration": 60,
+      "excludeFiles": "{node_modules/**,dist/**,mobile/**,browser/**,shared/**,assets/**,drizzle/**,db/**,.data/**,.omx/**,.expo/**,.git/**}"
+    }
+  },
+  "rewrites": [
+    {"source": "/api/:path*", "destination": "/api/:path*"},
+    {"source": "/:path*", "destination": "/index.html"}
+  ]
+}
