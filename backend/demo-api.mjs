@@ -7,7 +7,8 @@ import {analyzeRecords,commonInterests,optimizeGroups} from './demo-analysis.mjs
 
 export function createDemoApi(store,environment=process.env){
  const jobs=new Map();
- const pythonPath=environment.SAI_PYTHON || (fs.existsSync('.venv/Scripts/python.exe')?path.resolve('.venv/Scripts/python.exe'):fs.existsSync('.venv/bin/python')?path.resolve('.venv/bin/python'):'python');
+ const solverPython=process.platform==='win32'?'.data/solver-env/Scripts/python.exe':'.data/solver-env/bin/python';
+ const pythonPath=environment.SAI_PYTHON||environment.SAI_SOLVER_PYTHON||(fs.existsSync(solverPython)?path.resolve(solverPython):fs.existsSync('.venv/Scripts/python.exe')?path.resolve('.venv/Scripts/python.exe'):fs.existsSync('.venv/bin/python')?path.resolve('.venv/bin/python'):'python');
  const env={...environment};
  const response=(body,status=200,headers={})=>Response.json(body,{status,headers:{'Cache-Control':'no-store',...headers}});
  const active=id=>[...jobs.values()].some(j=>j.sessionId===id&&['queued','running'].includes(j.status));

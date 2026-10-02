@@ -6,7 +6,7 @@ import {createDemoApi} from './demo-api.mjs';
 
 const directory=path.resolve('.data',`demo-api-test-${Date.now()}`);
 let store=createDemoStore(directory);
-const api=createDemoApi(store,{});
+const api=createDemoApi(store,process.env);
 let cookie='';
 async function request(route,body,{session=cookie,origin}={}){
  const response=await api(new Request('http://localhost:8788/api/demo'+route,{method:body===undefined?'GET':'POST',headers:{...(session?{Cookie:session}:{}),...(body===undefined?{}:{'Content-Type':'application/json'}),...(origin?{Origin:origin}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})}));

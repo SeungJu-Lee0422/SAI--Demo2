@@ -1,7 +1,8 @@
 export type Preference='like'|'avoid'|'explore';
-export type Interest={id:string;label:string;category:string;shared:boolean;preference?:Preference};
+export type SourceEvidence={kind:'youtube'|'linkedin';label:string;detail?:string;url?:string};
+export type Interest={id:string;label:string;category:string;shared:boolean;preference?:Preference;source?:SourceEvidence};
 export type Profile={id:string;name:string;bio:string;color:string;interests:Interest[];avatar?:string;instagramHandle?:string;instagramVisible?:boolean;linkedinHandle?:string;linkedinVisible?:boolean};
-export type Match={id:string;label:string;category:string;kind:'exact'|'related'|'ai';members:string[];evidence:{profile:string;label:string}[];reason:string;similarity?:number};
+export type Match={id:string;label:string;category:string;kind:'exact'|'related'|'ai';members:string[];evidence:{profile:string;label:string;source?:SourceEvidence}[];reason:string;similarity?:number};
 export const categories=['전체','음악','게임','여행','운동','콘텐츠','음식','공부·일','기타'];
 export const preferenceNames={like:'좋아해요',avoid:'피하고 싶어요',explore:'해보고 싶어요'};
 export const preferenceQuestions={like:'무엇을 좋아해요?',avoid:'무엇을 싫어하거나 피하고 싶어요?',explore:'새롭게 해보고 싶은 것은요?'};
@@ -19,10 +20,10 @@ export function findMatches(profiles:Profile[]):Match[]{
  for(const p of profiles)for(const t of positiveInterests(p)){
   const key=canonical(t.label);if(!key)continue;
   let m=map.get(key);if(!m){m={id:'exact-'+key,label:key==='day6'?'DAY6':t.label,category:t.category,kind:'exact',members:[],evidence:[],reason:'좋아하거나 해보고 싶은 관심사가 겹쳐요.'};map.set(key,m);}
-  if(!m.members.includes(p.id)){m.members.push(p.id);m.evidence.push({profile:p.id,label:t.label});}
+  if(!m.members.includes(p.id)){m.members.push(p.id);m.evidence.push({profile:p.id,label:t.label,...(t.source?{source:t.source}:{})});}
  }
  const result=[...map.values()].filter(x=>x.members.length>=2);
- for(const c of concepts){const evidence=profiles.flatMap(p=>{const t=positiveInterests(p).find(t=>c.words.some(w=>canonical(t.label).includes(canonical(w))));return t?[{profile:p.id,label:t.label}]:[];});
+ for(const c of concepts){const evidence=profiles.flatMap(p=>{const t=positiveInterests(p).find(t=>c.words.some(w=>canonical(t.label).includes(canonical(w))));return t?[{profile:p.id,label:t.label,...(t.source?{source:t.source}:{})}]:[];});
   if(evidence.length<2||new Set(evidence.map(x=>canonical(x.label))).size<2)continue;
   result.push({id:'related-'+c.label,label:c.label,category:c.category,kind:'related',members:evidence.map(x=>x.profile),evidence,reason:'서로 다른 항목을 같은 관심 분야로 묶었어요.'});}
  return eligibleMatches(result,profiles).sort((a,b)=>b.members.length-a.members.length||(a.kind==='exact'?0:1)-(b.kind==='exact'?0:1)||a.label.localeCompare(b.label));

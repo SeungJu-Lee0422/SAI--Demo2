@@ -1,4 +1,4 @@
-export type DemoSource = 'youtube' | 'linkedin' | 'demo';
+export type DemoSource = 'youtube' | 'linkedin' | 'demo' | 'manual';
 export type DemoEvidence = { id: string; source: DemoSource; title: string; text: string; url?: string };
 export type DemoRecord = DemoEvidence & { kind?: string };
 export type DemoInterest = {
@@ -13,7 +13,10 @@ export type CommonInterest = {
 };
 export type DemoGroupQuality = { topicStrength: number; memberBalance: number; topicBreadth: number; pairCoverage: number; groupUtility: number };
 export type DemoGroup = { id: string; memberIds: string[]; score: number; interests: CommonInterest[]; quality: DemoGroupQuality };
-export type DemoPlan = { id: string; label: string; score: number; minGroupScore: number; balance: number; groups: DemoGroup[] };
+export type DemoPlan = {
+  id: string; label: string; score: number; minGroupScore: number; balance: number; groups: DemoGroup[];
+  unassigned?: string[]; solverStatus?: string; candidateScope?: 'exhaustive' | 'bounded'; algorithm?: string; candidateCount?: number;
+};
 export type DemoSolverResult = {
   plans: DemoPlan[];
   solver: {
