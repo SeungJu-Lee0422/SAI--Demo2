@@ -1,5 +1,9 @@
 .data
 .expo
+.vercel
+.venv
+__pycache__
+*.pyc
 .omx
 .openai
 .sites-runtime

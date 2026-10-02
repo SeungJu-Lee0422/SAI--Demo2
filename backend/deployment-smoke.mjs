@@ -8,7 +8,7 @@ const DB=createTursoDBFromEnv(),prefix=`vqa_${crypto.randomUUID().replaceAll('-'
 const users=[],ids=[];let room;
 async function call(body,token='',query='',expected=200){
  const response=await fetch(origin+'/api/app'+query,{method:body?'POST':'GET',headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(60000)});
- const data=await response.json();assert.equal(response.status,expected,JSON.stringify(data));return data;
+ const text=await response.text();let data;try{data=JSON.parse(text);}catch{throw new Error(`${body?.action||'GET'} HTTP ${response.status}: ${text.slice(0,150)}`);}assert.equal(response.status,expected,JSON.stringify(data));return data;
 }
 try{
  const home=await fetch(origin);assert.equal(home.status,200);assert.match(home.headers.get('content-type'),/text\/html/);
