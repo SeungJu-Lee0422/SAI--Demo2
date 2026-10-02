@@ -1,6 +1,6 @@
 export type Preference='like'|'avoid'|'explore';
 export type SourceEvidence={kind:'youtube'|'linkedin'|'demo';label:string;detail?:string;url?:string};
-export type Interest={id:string;label:string;category:string;shared:boolean;preference?:Preference;source?:SourceEvidence};
+export type Interest={id:string;label:string;category:string;shared:boolean;preference?:Preference;source?:SourceEvidence;topicId?:string};
 export type Profile={id:string;name:string;bio:string;color:string;interests:Interest[];avatar?:string;instagramHandle?:string;instagramVisible?:boolean;linkedinHandle?:string;linkedinVisible?:boolean;isDemo?:boolean};
 export type Match={id:string;label:string;category:string;kind:'exact'|'related'|'ai'|'bridge';members:string[];evidence:{profile:string;label:string;source?:SourceEvidence}[];reason:string;similarity?:number;relevance?:Record<string,number>;consensus?:number;conversationScore?:number;validation?:{model:'Qwen3-Embedding-0.6B';coverage:number;specificity:number;evidenceStamp?:string};connections?:{profile:string;interests:string[];reason?:string}[]};
 export const categories=['전체','음악','게임','여행','운동','콘텐츠','음식','공부·일','기타'];

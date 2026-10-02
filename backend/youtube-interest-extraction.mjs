@@ -14,7 +14,7 @@ function promptFor(channels){
  return instruction+JSON.stringify(safe.map(channel=>({i:channel.i,t:channel.t.slice(0,8)})));
 }
 
-function responseText(envelope){
+export function responseText(envelope){
  if(!envelope||envelope.status!=='completed')throw new Error('invalid envelope');
  const steps=Array.isArray(envelope.steps)?envelope.steps:Array.isArray(envelope.outputs)?envelope.outputs:[];
  const output=[...steps].reverse().find(step=>step?.type==='model_output'),content=output?.content;
@@ -39,11 +39,12 @@ function validate(text,channels){
  return interests;
 }
 
-export async function extractYouTubeInterests(channels,env={}){
- if(!Array.isArray(channels)||channels.length!==5)throw new Error('five channels required');
+export async function extractYouTubeInterests(channels,env={},signal){
+ if(!Array.isArray(channels)||!channels.length||channels.length>5)throw new Error('one to five channels required');
  const apiKey=typeof env.GEMINI_API_KEY==='string'?env.GEMINI_API_KEY.trim():'';if(!apiKey){const error=new Error('Gemini is not configured');error.code='NOT_CONFIGURED';throw error;}
- const fetcher=env.fetch||globalThis.fetch,body={model:(typeof env.GEMINI_MODEL==='string'&&env.GEMINI_MODEL.trim())||'gemini-3.5-flash-lite',input:promptFor(channels),store:false,response_format:{type:'text',mime_type:'application/json',schema:YOUTUBE_INTEREST_SCHEMA}};
- let response;try{response=await fetcher(INTERACTIONS_URL,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});}catch{const error=new Error('Gemini request failed');error.code='PROVIDER';throw error;}
+ const fetcher=env.fetch||globalThis.fetch,body={model:(typeof env.GEMINI_MODEL==='string'&&env.GEMINI_MODEL.trim())||'gemini-3.5-flash-lite',input:promptFor(channels).replace('채널 5개','채널 '+channels.length+'개').replace('번호(1~5)','번호(1~'+channels.length+')'),store:false,response_format:{type:'text',mime_type:'application/json',schema:YOUTUBE_INTEREST_SCHEMA}};
+ const timeout=AbortSignal.timeout(15000),active=signal?AbortSignal.any([signal,timeout]):timeout;
+ let response;try{active.throwIfAborted();response=await fetcher(INTERACTIONS_URL,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},body:JSON.stringify(body),signal:active});}catch(error){if(active.aborted)throw active.reason;const failure=new Error('Gemini request failed');failure.code='PROVIDER';throw failure;}
  if(!response?.ok){const error=new Error('Gemini response failed');error.code='PROVIDER';throw error;}
  try{return {interests:validate(responseText(await response.json()),channels),inputLength:body.input.length};}catch{const error=new Error('Gemini result was invalid');error.code='INVALID_RESULT';throw error;}
 }

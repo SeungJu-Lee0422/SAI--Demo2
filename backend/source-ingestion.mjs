@@ -34,7 +34,7 @@ export function parseLinkedInText(input){
 
 export function mergeSourceInterests(existing,candidates,kind){
  const out=Array.isArray(existing)?existing.filter(x=>x&&typeof x==='object'&&typeof x.label==='string'&&typeof x.category==='string'):[],seen=new Set(out.map(x=>`${x.category}:${canonical(x.label)}`));
- for(const c of candidates){if(!c||typeof c.label!=='string'||contactOrSensitive(c.label))continue;const category=['음악','게임','여행','운동','콘텐츠','음식','공부·일','기타'].includes(c.category)?c.category:'기타',k=`${category}:${canonical(c.label)}`;if(seen.has(k))continue;seen.add(k);const detail=typeof c.evidence==='string'?c.evidence.slice(0,240):'',url=typeof c.url==='string'&&/^https:\/\/(?:www\.)?youtube\.com\//.test(c.url)?c.url:undefined;out.push({id:crypto.randomUUID(),label:c.label.slice(0,60),category,shared:false,preference:'like',source:{kind,label:c.label.slice(0,60),...(detail?{detail}:{}),...(url?{url}:{})}});}
+ for(const c of candidates){if(!c||typeof c.label!=='string'||contactOrSensitive(c.label))continue;const category=['음악','게임','여행','운동','콘텐츠','음식','공부·일','기타'].includes(c.category)?c.category:'기타',k=`${category}:${canonical(c.label)}`;if(seen.has(k))continue;seen.add(k);const detail=typeof c.evidence==='string'?c.evidence.slice(0,240):'',url=typeof c.url==='string'&&/^https:\/\/(?:www\.)?youtube\.com\//.test(c.url)?c.url:undefined;out.push({id:crypto.randomUUID(),label:c.label.slice(0,60),category,shared:false,preference:'like',...(typeof c.topicId==='string'?{topicId:c.topicId}:{}),source:{kind,label:c.label.slice(0,60),...(detail?{detail}:{}),...(url?{url}:{})}});}
  return out.slice(0,100);
 }
 

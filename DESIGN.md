@@ -32,9 +32,12 @@
 - Reuse Demo2 components and tokens. Keep its 600px centered shell, bottom navigation, cards and spacing.
 - Privacy decisions are visible beside each interest and each social link.
 - Show common topics only with evidence for every selected person; label partial table topics with participant coverage.
-- Conversation topics distinguish 공통 관심사 from 연결 주제. When direct topics are insufficient, opt-in Gemini discovery uses only representative public interests; Qwen3 verifies support for every person before a bridge appears or contributes to table quality.
-- YouTube connection loads source data without registering interests. Users select exactly five subscription channels, then request Gemini extraction with an input capped at 1,000 characters. Register one to five inferred interests privately and retain the selected channel evidence; keep existing interests and sharing decisions.
-- YouTube sensitive data: ask Gemini to remove personal/sensitive information and continue interest extraction. Omit any sensitive result that remains while saving valid interests; omit sensitive channel titles from saved interest evidence. If cleanup leaves no supported interests, complete with zero additions and explain the empty result.
+- Conversation topics distinguish 공통 관심사 from 연결 주제. Automatic discovery is enabled by default and remains an explicit user choice: when fewer than three direct topics have evidence for every selected person, Gemini proposes bridge labels from representative public interests and Qwen3 requires per-member relevance of 0.60 plus harmonic consensus of 0.65. The combined result remains Top 3. Turning discovery off keeps direct topics only.
+- YouTube connection loads source data without registering interests. Users select exactly five subscription channels, then request AI analysis and normalization. The server compares source text with the account's existing private topic catalog through Qwen3; only unmatched evidence goes to Gemini for a candidate label, and Qwen3 must verify that label against its original source before a private interest is saved.
+- LinkedIn import accepts only text the user manually exported and pasted. It follows the same existing-topic comparison, unmatched-label generation, and source verification flow as YouTube; LinkedIn account authentication and automatic career collection remain out of scope.
+- Source normalization preserves original evidence and never uses another user's data. The topic catalog is private to its account, has no global unbounded generation path, and is deleted with the profile. A request accepts at most 40 incoming source items and a profile keeps at most 100 interests. The Qwen match/verification threshold is a provisional 0.75.
+- Source privacy filtering excludes contact identifiers and unsupported sensitive evidence before storage. If filtering leaves no verifiable evidence, save nothing and explain the empty result.
+- Gemini is required only when source evidence does not match the existing catalog. Qwen source normalization is mandatory; a model error saves no partial result. Existing interests and sharing decisions remain unchanged.
 - Bridge detail shows each person's actual interest evidence, connection explanation, and semantic relevance. If no candidate passes validation, explain that a strong conversation topic could not be found; preserve available direct results when discovery is unavailable.
 - Tradeoffs: SAI's authenticated APIs remain separate from anonymous Demo APIs; reuse presentation without conflating sessions.
 
@@ -70,13 +73,13 @@
 - Error: preserve inputs and show dismissible server message; allow retry.
 - Success: concise saved/imported notice; refresh authenticated state.
 - Disabled: only when required fields/selection/permissions or pending request prevent the action.
-- YouTube selection: show the selected count out of five; disable additional unselected channels at the limit and extraction until five are selected. Preserve selection on errors, explain fewer than five available channels, and disclose that selected channel names/descriptions go to Gemini.
+- Source import: show AI analysis/normalization progress, preserve input or YouTube selection on errors, and explain that only source-verified interests are saved privately. YouTube shows the selected count out of five, disables additional unselected channels at the limit, and disables analysis until five are selected.
 - Offline/slow network: expose request failure; cancel browser model work when leaving the page.
 
 ## Content voice
 - Tone: short, friendly Korean consistent with Demo2.
 - Terminology: 관심사, 공유, 친구 요청, 모임, 테이블, 편성.
-- Conversation recommendation labels: 공통 관심사 / 연결 주제; use 함께 이야기할 주제 for the combined result. Explain sharing with the generation provider before enabling discovery.
+- Conversation recommendation labels: 공통 관심사 / 연결 주제; use 함께 이야기할 주제 for the combined Top 3. Explain automatic discovery and its opt-out where the choice is shown.
 - Microcopy rules: separate explicit likes/avoid/explore; distinguish manual input and YouTube/LinkedIn sources; score is a reference, not relationship probability.
 
 ## Implementation constraints

@@ -1,7 +1,16 @@
 import {embeddingTexts,rankSemantic} from '../shared/semantic-ranking.ts';
 import {bridgeTexts,validateBridgeTopics as validateBridgeVectors} from '../shared/conversation-topics.ts';
 import {getQwenExtractor} from './qwen-runtime.mjs';
+import {withDeadline} from './conversation-topics.mjs';
 const cache=new Map();
+export async function embedInterestTexts(texts,signal){
+ if(!Array.isArray(texts)||texts.length>240||texts.some(text=>typeof text!=='string'||text.length>1200))throw new Error('관심사 분석 입력 범위를 확인해주세요.');
+ return withDeadline(async active=>{
+  const extractor=await getQwenExtractor(),vectors=[];
+  for(const text of texts){active.throwIfAborted();const output=await extractor([text],{pooling:'last_token',normalize:true,truncation:true,max_length:128});vectors.push(output.tolist()[0]);}
+  active.throwIfAborted();return vectors;
+ },signal,120000);
+}
 export async function semanticPairs(people){
  const extractor=await getQwenExtractor();
  const texts=embeddingTexts(people);if(!texts.length)return [];const missing=[...new Set(texts.filter(t=>!cache.has(t)))];
