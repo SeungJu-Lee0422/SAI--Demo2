@@ -115,6 +115,7 @@ export async function api(req,env){const requestStartedAt=Date.now();try{
   if(typeof b.text!=='string'||b.text.length>50000)return fail('LinkedIn 내보내기 텍스트는 50,000자 이하로 입력해주세요.');
   if(!p)return fail('먼저 내 취향을 등록해주세요.');
   const initial=storedInterests(p.interests);if(initial.length>=100)return fail('관심사는 최대 100개까지 등록할 수 있어요. 기존 관심사를 정리한 뒤 다시 시도해주세요.');
+  const sourceSnapshot=(await db.prepare('SELECT linkedin_summary FROM source_syncs WHERE owner=?').bind(owner).first())?.linkedin_summary||'';
   const rows=parseLinkedInText(b.text);if(!rows.length)return fail('기술·경력·학력·프로젝트 제목 아래에 분석할 원문 항목을 넣어주세요.');
   const records=rows.map((row,index)=>({...row,id:`linkedin-${index}`}));let normalized;
   try{normalized=await normalizeSource(db,owner,initial,records,env,(unmatched,active)=>generateSourceTopics(unmatched,env,active),req.signal,40);}catch(error){return normalizationFailure(error);}
@@ -125,11 +126,12 @@ export async function api(req,env){const requestStartedAt=Date.now();try{
   const current=storedInterests(latest.interests),merged=mergeSourceInterests(current,normalized.interests,'linkedin'),count=merged.length-current.length;
   const newKeys=new Set(normalized.interests.map(item=>item.category+':'+canonical(item.label)).filter(key=>!current.some(item=>item.category+':'+canonical(item.label)===key)));
   if(current.length+newKeys.size>100)return fail('분석된 관심사를 모두 저장하면 100개 제한을 넘어요. 기존 관심사를 정리한 뒤 다시 시도해주세요.');
-  const counts=rows.reduce((result,row)=>(result[row.section]=(result[row.section]||0)+1,result),{}),summary={itemCount:rows.length,candidateCount:count,counts,samples:normalized.interests.slice(0,3).map(item=>item.label),normalization:{model:'Qwen3-Embedding-0.6B',...normalized.stats}},now=new Date().toISOString(),serialized=JSON.stringify(merged);
+  const counts=rows.reduce((result,row)=>(result[row.section]=(result[row.section]||0)+1,result),{}),summary={itemCount:rows.length,candidateCount:count,counts,samples:normalized.interests.slice(0,3).map(item=>item.label),normalizationRun:crypto.randomUUID(),normalization:{model:'Qwen3-Embedding-0.6B',...normalized.stats}},now=new Date().toISOString(),serialized=JSON.stringify(merged);
+  req.signal.throwIfAborted();
   const results=await db.batch([
-   db.prepare('UPDATE profiles SET interests=? WHERE owner=? AND interests=?').bind(serialized,owner,latest.interests),
-   db.prepare("INSERT INTO source_syncs(owner,linkedin_status,linkedin_summary,linkedin_updated,updated) SELECT ?,'ok',?,?,? WHERE EXISTS (SELECT 1 FROM profiles WHERE owner=? AND interests=?) ON CONFLICT(owner) DO UPDATE SET linkedin_status='ok',linkedin_summary=excluded.linkedin_summary,linkedin_updated=excluded.linkedin_updated,updated=excluded.updated").bind(owner,JSON.stringify(summary),now,now,owner,serialized),
-   ...interestTopicStatements(db,owner,normalized.topics,{serializedInterests:serialized}),
+   db.prepare("UPDATE profiles SET interests=? WHERE owner=? AND interests=? AND COALESCE((SELECT linkedin_summary FROM source_syncs WHERE owner=?),'')=?").bind(serialized,owner,latest.interests,owner,sourceSnapshot),
+   db.prepare("INSERT INTO source_syncs(owner,linkedin_status,linkedin_summary,linkedin_updated,updated) SELECT ?,'ok',?,?,? WHERE EXISTS (SELECT 1 FROM profiles WHERE owner=? AND interests=?) AND COALESCE((SELECT linkedin_summary FROM source_syncs WHERE owner=?),'')=? ON CONFLICT(owner) DO UPDATE SET linkedin_status='ok',linkedin_summary=excluded.linkedin_summary,linkedin_updated=excluded.linkedin_updated,updated=excluded.updated").bind(owner,JSON.stringify(summary),now,now,owner,serialized,owner,sourceSnapshot),
+   ...interestTopicStatements(db,owner,normalized.topics,{serializedInterests:serialized,linkedinSummary:JSON.stringify(summary)}),
   ]);
   if(changed(results[0])!==1)return fail('관심사가 분석 중 변경되었어요. 최신 목록에서 다시 시도해주세요.',409);
   return json({count,interests:merged,normalization:summary.normalization,summary:normalized.interests.length?`LinkedIn 원문을 Qwen3로 비교·검증해 ${count}개의 새로운 비공개 관심사를 가져왔어요.`:'원문에서 검증할 수 있는 관심사를 찾지 못했어요.'});
@@ -156,6 +158,7 @@ export async function api(req,env){const requestStartedAt=Date.now();try{
   if(current.length+newKeys.size>100)return fail('분석된 관심사를 모두 저장하면 100개 제한을 넘어요. 기존 관심사를 정리한 뒤 다시 시도해주세요.');
   let latestSummary;try{latestSummary=JSON.parse(latestSource?.youtube_summary||'null');}catch{}if(!latestSummary||typeof latestSummary!=='object')latestSummary=summary;
   const now=new Date().toISOString(),nextSummary={...latestSummary,candidateCount:count,inference:{provider:generated?'Gemini + Qwen3':'Qwen3',channelIds:b.channelIds,labels:normalized.interests.map(item=>item.label),inputLength},normalization:{model:'Qwen3-Embedding-0.6B',...normalized.stats}},serialized=JSON.stringify(merged),summaryJson=JSON.stringify(nextSummary);
+  req.signal.throwIfAborted();
   const results=await db.batch([
    db.prepare('UPDATE profiles SET interests=? WHERE owner=? AND interests=? AND EXISTS (SELECT 1 FROM source_syncs WHERE owner=? AND youtube_summary=?)').bind(serialized,owner,latestRow.interests,owner,source.youtube_summary),
    db.prepare('UPDATE source_syncs SET youtube_summary=?,youtube_updated=?,updated=? WHERE owner=? AND youtube_summary=? AND EXISTS (SELECT 1 FROM profiles WHERE owner=? AND interests=?)').bind(summaryJson,now,now,owner,source.youtube_summary,owner,serialized),

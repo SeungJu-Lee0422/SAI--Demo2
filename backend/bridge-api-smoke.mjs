@@ -49,6 +49,7 @@ assert.equal(recommendation.data.matches.length,1);assert.equal(recommendation.d
 assert.equal(recommendation.data.matches[0].members.length,3);
 assert(!prompt.includes('개인적인 비공개'));assert(!prompt.includes('야구'));assert(!prompt.includes('참가자0'));
 assert(!JSON.stringify(recommendation.data.matches).includes('개인적인 비공개'));
+const automatic=await call({action:'analyze',profileIds:request.profileIds},accounts[0].token);assert.equal(automatic.data.bridgeStatus,'complete','Bridge discovery is the default account path');const callsBeforeOptOut=calls,optOut=await call({...request,useBridge:false},accounts[0].token);assert.equal(optOut.data.bridgeStatus,undefined);assert.equal(calls,callsBeforeOptOut,'explicit opt-out never calls Gemini');
 const originalCandidate=candidate;
 candidate={...originalCandidate,connections:originalCandidate.connections.slice(1)};
 assert.equal((await call(request,accounts[0].token)).data.bridgeStatus,'none');

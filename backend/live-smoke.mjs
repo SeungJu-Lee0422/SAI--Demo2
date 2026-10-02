@@ -12,7 +12,7 @@ await new Promise((resolve,reject)=>{probe.once('error',reject);probe.listen(0,'
 const port=probe.address().port;
 await new Promise(resolve=>probe.close(resolve));
 const server=spawn(process.execPath,['backend/local.mjs'],{
- env:{...process.env,SAI_PORT:String(port),SAI_DB_PATH:join(scratch,'test.sqlite'),SAI_DEMO_DIR:join(scratch,'demo'),YOUTUBE_CLIENT_ID:'',YOUTUBE_CLIENT_SECRET:''},
+ env:{...process.env,SAI_PORT:String(port),SAI_DB_PATH:join(scratch,'test.sqlite'),SAI_DEMO_DIR:join(scratch,'demo'),YOUTUBE_CLIENT_ID:'',YOUTUBE_CLIENT_SECRET:'',GEMINI_API_KEY:''},
  stdio:['ignore','pipe','pipe'],
 });
 const origin=`http://127.0.0.1:${port}`;
@@ -42,14 +42,17 @@ try{
    {id:`private-${i}`,label:'비공개 검증',category:'기타',shared:false},
   ]},account.token)).id);
  }
- const imported=await call({action:'importLinkedInText',text:'Skills:\nComputer Vision\nDeep Learning\nProjects:\nVisual Recognition'},tokens[0]);
- assert(imported.count>=2);
+ const imported=await call({action:'importLinkedInText',text:'Skills:\n머신러닝'},tokens[0]);
+ assert.equal(imported.count,0);assert.equal(imported.normalization.reused,1,'real Qwen reuses an existing topic without Gemini');
  const owner=(await call(undefined,tokens[0])).me;
- assert(owner.interests.some(t=>t.source?.kind==='linkedin'&&!t.shared));
+ assert(owner.interests.some(t=>t.label==='머신러닝'&&t.shared),'source normalization preserves existing sharing');
  const visible=(await call(undefined,'','?profile='+ids[0])).profile;
- assert(visible.interests.every(t=>t.shared&&!t.source));
+ assert(visible.interests.every(t=>t.shared&&!t.topicId));
  const sources=(await call(undefined,tokens[0],'?sources=1')).sources;
- assert.equal(sources.linkedin.status,'ok');assert(sources.linkedin.itemCount>=2);
+ assert.equal(sources.linkedin.status,'ok');assert.equal(sources.linkedin.itemCount,1);
+ await call({action:'importLinkedInText',text:'Skills:\n백색 왜성 관측'},tokens[0],'',503);
+ assert.deepEqual((await call(undefined,tokens[0])).me.interests,owner.interests,'unmatched source without Gemini saves nothing');
+ assert.deepEqual((await call(undefined,tokens[0],'?sources=1')).sources,sources);
  await call({action:'startYouTubeOAuth'},tokens[0],'',503);
  const room=await call({action:'createRoom',name:'실제 서버 검증 모임'},tokens[0]);
  for(let i=1;i<12;i++)await call({action:'joinRoom',id:room.id},tokens[i]);
@@ -81,5 +84,5 @@ try{
  const friends=await call({action:'analyze',profileIds:ids.slice(0,3)},tokens[0]);
  assert.equal(friends.people.length,3);
  await call({action:'analyze',profileIds:[ids[0],ids[3]]},tokens[0],'',403);
- console.log('PASS live HTTP/SQLite: private LinkedIn import, source status, 12-person CP-SAT Top-3, exact-once assignment, owner-only confirmation, and multi-friend analysis');
+ console.log('PASS live HTTP/SQLite: real Qwen source-topic reuse, missing-Gemini no-write, source status, 12-person CP-SAT Top-3, exact-once assignment, owner-only confirmation, and multi-friend analysis');
 }finally{server.kill('SIGTERM');}

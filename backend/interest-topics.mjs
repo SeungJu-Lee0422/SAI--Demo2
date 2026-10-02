@@ -53,6 +53,7 @@ async function embeddings(embedTexts,texts,signal){
 }
 
 function sourceEvidence(record){return record.evidence?`${record.label} · ${record.evidence}`:record.label;}
+function sourceEmbeddingText(record){const label=record.category?`${record.category} ${record.label}`:record.label;return record.evidence&&canonical(record.evidence)!==canonical(record.label)?`${label} · ${record.evidence}`:label;}
 
 export async function loadInterestTopics(db,owner,currentInterests){
  const safeOwner=String(owner||'');if(!safeOwner)return [];
@@ -101,9 +102,9 @@ export function interestTopicStatements(db,owner,topics,guard){
  for(const topic of input){
   const id=typeof topic?.id==='string'?topic.id.trim():'',label=cleanText(topic?.label,60),category=cleanCategory(topic?.category);
   if(!id||id.length>100||!label)throw new TypeError('A normalized interest topic is malformed');const key=topicKey(label,category);if(seen.has(key))continue;seen.add(key);
-  const sourceGuard=typeof guard?.youtubeSummary==='string';
-  const sql=`INSERT INTO interest_topics(id,owner,canonical_key,label,category,created) SELECT ?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM profiles WHERE owner=? AND interests=?)${sourceGuard?' AND EXISTS (SELECT 1 FROM source_syncs WHERE owner=? AND youtube_summary=?)':''} ON CONFLICT(owner,canonical_key) DO UPDATE SET label=excluded.label,category=excluded.category`;
-  statements.push(db.prepare(sql).bind(id,safeOwner,key,label,category,new Date().toISOString(),safeOwner,serialized,...(sourceGuard?[safeOwner,guard.youtubeSummary]:[])));
+  const sourceKey=typeof guard?.youtubeSummary==='string'?'youtube_summary':typeof guard?.linkedinSummary==='string'?'linkedin_summary':null,sourceValue=sourceKey==='youtube_summary'?guard.youtubeSummary:guard.linkedinSummary;
+  const sql=`INSERT INTO interest_topics(id,owner,canonical_key,label,category,created) SELECT ?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM profiles WHERE owner=? AND interests=?)${sourceKey?' AND EXISTS (SELECT 1 FROM source_syncs WHERE owner=? AND '+sourceKey+'=?)':''} ON CONFLICT(owner,canonical_key) DO UPDATE SET label=excluded.label,category=excluded.category`;
+  statements.push(db.prepare(sql).bind(id,safeOwner,key,label,category,new Date().toISOString(),safeOwner,serialized,...(sourceKey?[safeOwner,sourceValue]:[])));
  }
  return statements;
 }
@@ -123,7 +124,7 @@ export async function normalizeInterestRecords(records,existingTopics,{embedText
   const key=topicKey(label,category);if(topic?.avoid===true){blockedKeys.add(key);continue;}if(catalogIds.has(id)||catalogKeys.has(key))continue;catalogIds.add(id);catalogKeys.add(key);catalog.push({id,label,category});
  }
  abort(signal);
- const initialTexts=[...source.map(row=>sourceEvidence(row)),...catalog.map(topic=>`${topic.category} ${topic.label}`)],initial=await embeddings(embedTexts,initialTexts,signal),sourceVectors=initial.slice(0,source.length),catalogVectors=initial.slice(source.length);
+ const initialTexts=[...source.map(sourceEmbeddingText),...catalog.map(topic=>`${topic.category} ${topic.label}`)],initial=await embeddings(embedTexts,initialTexts,signal),sourceVectors=initial.slice(0,source.length),catalogVectors=initial.slice(source.length);
  const unmatched=[],assignments=new Map(),represented=new Set();
  const assign=(topic,record,kind)=>{
   const key=topicKey(topic.label,topic.category);let assignment=assignments.get(key);

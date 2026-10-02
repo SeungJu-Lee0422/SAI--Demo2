@@ -40,8 +40,8 @@ try{
  assert.throws(()=>createTursoDB({url:'http://remote.example',authToken:'fake-token'}),TursoDatabaseError);
  let capturedUrl='',capturedRedirect='';const protocolDB=createTursoDB({url:'libsql://database.example',authToken:'fake-token',fetchImpl:async(url,options)=>{capturedUrl=String(url);capturedRedirect=options.redirect;return Response.json({baton:null,base_url:null,results:[ok([],[],0),ok([],[],0),{type:'ok',response:{type:'close'}}]});}});
  await protocolDB.prepare('SELECT 1').all();assert.equal(capturedUrl,'https://database.example/v2/pipeline');assert.equal(capturedRedirect,'error');
- assert.equal(await migrateTurso({db:DB}),8);assert.equal(await migrateTurso({db:DB}),0);
- assert.equal((await DB.prepare('SELECT COUNT(*) AS count FROM turso_migrations').first()).count,8);
+ assert.equal(await migrateTurso({db:DB}),9);assert.equal(await migrateTurso({db:DB}),0);
+ assert.equal((await DB.prepare('SELECT COUNT(*) AS count FROM turso_migrations').first()).count,9);
  await DB.prepare('CREATE TABLE unique_test(value TEXT UNIQUE)').run();
  assert.equal((await call({action:'saveProfile',name:'x'})).status,401);
  const registered=await call({action:'register',username:'remote_user',password:'correct horse battery',confirmPassword:'correct horse battery'});
@@ -58,5 +58,5 @@ try{
  const malformed=await call('{',token);assert.equal(malformed.status,503);assert.equal(JSON.stringify(malformed.data).includes('fake-token'),false);
  const bound=await DB.prepare('SELECT ? AS text_value, ? AS integer_value, ? AS null_value').bind('bound',42,null).first();
  assert.deepEqual(bound,{text_value:'bound',integer_value:42,null_value:null});
- console.log('Vercel Turso API smoke passed: 8 migrations, rerun ledger, signup, persistence, bindings, rollback, and safe errors.');
+ console.log('Vercel Turso API smoke passed: 9 migrations, rerun ledger, signup, persistence, bindings, rollback, and safe errors.');
 }finally{server.close();sqlite.close();}

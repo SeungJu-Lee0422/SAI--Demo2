@@ -57,6 +57,13 @@
       "when": 1790996400000,
       "tag": "0007_source_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1791025200000,
+      "tag": "0008_interest_topics",
+      "breakpoints": true
     }
   ]
 }

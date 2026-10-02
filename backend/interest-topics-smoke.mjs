@@ -4,7 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {assertInterestTopicCapacity,interestTopicStatements,loadInterestTopics,normalizeInterestRecords} from './interest-topics.mjs';
 
 const vectors=new Map([
- ['음악 재즈',[1,0,0]],['재즈 채널 · 구독 채널',[.98,.1,0]],
+ ['음악 재즈',[1,0,0]],['음악 재즈 채널 · 구독 채널',[.98,.1,0]],
  ['야간 산책 · 영상 모음',[0,1,0]],['운동 야간 러닝',[0,.98,.1]],
  ['완전히 무관한 원문',[1,0,0]],['게임 전략 게임',[0,1,0]],
  ['A · source',[1,0,0]],['B · source',[.99,.01,0]],['음악 라이브 음악',[1,0,0]],['음악 라이브-음악',[1,0,0]],['음악 콘서트 감상',[.99,.01,0]],
