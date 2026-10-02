@@ -1,5 +1,7 @@
 const MODEL='onnx-community/Qwen3-Embedding-0.6B-ONNX';
+const MODEL_REVISION='c25a394dd583836952667c12f008335071b3f43d';
 const MAX_MODEL_BYTES=640*1024*1024;
+const originalFetches=new WeakMap();
 let ready;
 
 // Transformers.js asks its cache for a Response when loading an ONNX buffer in
@@ -35,14 +37,20 @@ export function createModelMemoryCache(){
  };
 }
 
-export function configureQwenRuntime(env,vercel=process.env.VERCEL==='1'){
- if(!vercel){env.cacheDir='.data/models';return {dtype:'q8'};}
+export function configureQwenRuntime(env,vercel=process.env.VERCEL==='1',loadSignal){
+ if(!vercel){env.cacheDir='.data/models';return {dtype:'q8',revision:MODEL_REVISION};}
  const memory=createModelMemoryCache();
  env.allowLocalModels=false;env.allowRemoteModels=true;
  env.useFSCache=false;env.useBrowserCache=false;env.useCustomCache=true;env.customCache=memory;
+ const fetchModel=originalFetches.get(env)||env.fetch||globalThis.fetch;
+ originalFetches.set(env,fetchModel);
+ env.fetch=(input,init={})=>{
+  const deadline=AbortSignal.timeout(90000);
+  return fetchModel(input,{...init,signal:AbortSignal.any([deadline,...(init.signal?[init.signal]:[]),...(loadSignal?[loadSignal]:[])])});
+ };
  // Avoid native weight prepacking and graph copies during initialization so
  // the q8 embedding model fits the existing Hobby function's 2GB memory.
- return {dtype:'q8',device:'cpu',session_options:{
+ return {dtype:'q8',revision:MODEL_REVISION,device:'cpu',session_options:{
   intraOpNumThreads:1,interOpNumThreads:1,
   enableCpuMemArena:false,enableMemPattern:false,graphOptimizationLevel:'disabled',
   extra:{session:{disable_prepacking:'1'}},
@@ -52,9 +60,11 @@ export function configureQwenRuntime(env,vercel=process.env.VERCEL==='1'){
 export function getQwenExtractor(){
  ready??=(async()=>{
   const {pipeline,env}=await import('@huggingface/transformers');
-  const options=configureQwenRuntime(env);
+  const loadController=new AbortController(),options=configureQwenRuntime(env,process.env.VERCEL==='1',loadController.signal);
+  const memory=process.env.VERCEL==='1'?env.customCache:undefined;
   try{return await pipeline('feature-extraction',MODEL,options);}
-  finally{if(process.env.VERCEL==='1')env.customCache?.clear();}
+  catch(error){loadController.abort(error);throw error;}
+  finally{memory?.clear();}
  })().catch(error=>{ready=undefined;throw error;});
  return ready;
 }
